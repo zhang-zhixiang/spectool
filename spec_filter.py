@@ -1,5 +1,9 @@
 import numpy as np
+from astropy.constants import c
 from . import convol
+
+
+c = c.value
 
 
 def gaussian_filter(wave, flux, velocity):
