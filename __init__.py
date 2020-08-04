@@ -3,7 +3,7 @@
 
 # from .rebin import *
 from . import rebin
-from . import libccf
+from . import ccf
 from . import specio
 from . import spec_func
 from . import spec_filter

@@ -34,3 +34,14 @@ def read_txt_spec(fn):
     else:
         err = None
     return wave, flux, err
+
+
+def read_spec(fn):
+    data = 123
+
+
+class Spectrum(object):
+    def __init__(self):
+        self.wave = None
+        self.flux = None
+        self.error = None

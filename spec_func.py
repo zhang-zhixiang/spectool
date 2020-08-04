@@ -3,8 +3,40 @@ from scipy.ndimage import median_filter
 from scipy.optimize import curve_fit
 from lmfit.models import PolynomialModel
 import matplotlib.pyplot as plt
+from astropy.constants import c
 from . import rebin
 from . import convol
+
+
+c = c.value
+
+
+def air2vac(wave):
+    """convert the wavelength from air to vacuum
+
+    Args:
+        wave (numpy.ndarray): wave data
+
+    Returns:
+        numpy.ndarray: the wavelength in vacuum
+    """
+    coef = 6.4328e-5 + 2.94981e-2/(146-(1.0e4/wave)**2) + 2.554e-4/(41-(1.0e4/wave)**2)
+    return (1+coef) * wave
+
+
+def shift_wave(wave, shift):
+    """shift the wavelength in the unit of km/s
+
+    Arguments:
+        wave {numpy.ndarray(float64)} -- wave arr
+        shift {float} -- unit = km/s
+
+    Returns:
+        numpy.darray(float64) -- the wave after wavelength shift
+    """
+    waveshift = shift * wave * 1000 / c
+    newave = wave + waveshift
+    return newave
 
 
 def normalize_wave(wave):
