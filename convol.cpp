@@ -100,6 +100,66 @@ ARR get_edge(const ARR & wave){
 }
 
 
+ARR gauss_filter_mutable(const ARR & wave, const ARR & flux, const ARR & arrvelocity){
+    const double c = 299792458.0 / 1000;
+    const double sigma_l = arrvelocity.front() / 2.355 * wave.front() / c;
+    const double sigma_r = arrvelocity.back() / 2.355 * wave.back() / c;
+    double delta_w1 = *(wave.begin()+1) - *(wave.begin());
+    double delta_w2 = *(wave.rbegin()) - *(wave.rbegin()+1);
+    int left_margin = (int)(5*sigma_l/delta_w1);
+    int right_margin = (int)(5*sigma_r/delta_w2);
+    ARR newave, newflux, arrsigma;
+    double wtmp = wave.front() - left_margin * delta_w1;
+    for(int i = 0; i < left_margin; ++i){
+        newave.push_back(wtmp);
+        newflux.push_back(flux.front());
+        double sigma = arrvelocity.front() / 2.355 * wtmp / c;
+        arrsigma.push_back(sigma);
+        wtmp += delta_w1;
+    }
+    for (int i = 0; i < wave.size(); ++i){
+        newave.push_back(wave[i]);
+        newflux.push_back(flux[i]);
+        double sigma = arrvelocity[i] / 2.355 * wave[i] / c;
+        arrsigma.push_back(sigma);
+    }
+    wtmp = wave.back();
+    for (int i = 0; i < right_margin; ++i){
+        wtmp += delta_w2;
+        newave.push_back(wtmp);
+        newflux.push_back(flux.back());
+        double sigma = arrvelocity.back() / 2.355 * wtmp / c;
+        arrsigma.push_back(sigma);
+    }
+    ARR gauss_profile(newave.size());
+    ARR new_flux(newave.size());
+    for( auto & val : new_flux) val = 0;
+    ARR arredge = get_edge(newave);
+    ARR arrwidth;
+    for( size_t d = 0; d < arredge.size()-1; ++d)
+        arrwidth.push_back(arredge[d+1]-arredge[d]);
+    for( size_t ind = 0; ind < newave.size(); ++ind){
+        double sigma = arrsigma[ind];
+        double w0 = newave[ind];
+        double mf = newflux[ind] * arrwidth[ind];
+        auto indlr = gaussian2(newave, sigma, w0, gauss_profile, ind, 1.0e-5);
+        const int indl = indlr.first;
+        const int indr = indlr.second;
+        double area = 0;
+        for ( size_t j =indl; j < indr; ++j)
+            area += arrwidth[j] * gauss_profile[j];
+        double inv_area = 1.0/area;
+        for ( size_t j = indl; j < indr; ++j){
+            new_flux[j] += mf * (gauss_profile[j] * inv_area);
+            gauss_profile[j] = 0;
+        }
+    }
+    ARR outflux;
+    for (int i = left_margin; i < left_margin + wave.size(); ++i) outflux.push_back(new_flux[i]);
+    return outflux;
+}
+
+
 // a gaussian filter for spectrum, the sigma of gaussians can be different in
 // different wave, the sigma is defined as sigma = par0 + par1*wave + par2*wave^2 ...
 // return the fluxes after smooth
