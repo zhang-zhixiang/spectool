@@ -88,8 +88,8 @@ def select_wave(wave, select_window=None):
     """
     if select_window is None:
         return np.where(wave < np.inf)
-        lw, rw = select_window[0]
-        arg = (wave > lw) & (wave < rw)
+    lw, rw = select_window[0]
+    arg = (wave > lw) & (wave < rw)
     for win in select_window[1:]:
         lw, rw = win
         arg_tmp = (wave > lw) & (wave < rw)
@@ -116,7 +116,7 @@ def spec_match(wave, flux, wave_ref, flux_ref, mask=None, degree=20):
     wunit = normalize_wave(wave)
     iniscale = fref / flux
     iniscale = median_filter(iniscale, 10)
-    mod = PolynomialModel(degree=7)
+    # mod = PolynomialModel(degree=7)
     arg = mask_wave(wave, mask)
     wunit_m = wunit[arg]
     iniscale_m = iniscale[arg]
@@ -132,8 +132,8 @@ def spec_match(wave, flux, wave_ref, flux_ref, mask=None, degree=20):
     # return out
 
 
-def continuum(wave, flux, degree=15, maxiterations=10, plot=False):
-    """reduce the spectrum continuum, and return the uniform flux 
+def continuum(wave, flux, degree=7, maxiterations=10, plot=False):
+    """reduce the spectrum continuum, and return the uniform flux
     after the continuum correction
 
     Arguments:
@@ -167,7 +167,7 @@ def continuum(wave, flux, degree=15, maxiterations=10, plot=False):
     # inipar = [1.0 for i in range(order+1)]
     inipar = np.ones(degree+1)
     # out = leastsq(residual, inipar, args=(newave, newflux))
-    popt, pcov = curve_fit(func, newave, newflux, p0=inipar)
+    popt, _ = curve_fit(func, newave, newflux, p0=inipar)
     # print(popt)
     # print(out[0])
     scale = func(newave, *popt)
@@ -181,7 +181,7 @@ def continuum(wave, flux, degree=15, maxiterations=10, plot=False):
     while count < maxiterations:
         # out = leastsq(residual, out[0], args=(newave, newflux))
         # scale = np.array(convol.legendre_poly(newave, out[0]))
-        popt, pcov = curve_fit(func, newave, newflux, p0=popt)
+        popt, _ = curve_fit(func, newave, newflux, p0=popt)
         scale = func(newave, *popt)
 
         tmpuniform = newflux / scale
@@ -198,9 +198,9 @@ def continuum(wave, flux, degree=15, maxiterations=10, plot=False):
     tmpscale = func(newave2, *popt)
     # print('loop num = ', count)
     # print(popt)
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
     if plot is True:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
         ax.plot(wave, tmpscale)
         ax.plot(wave, flux)
         plt.show()

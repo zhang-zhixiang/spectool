@@ -1,6 +1,7 @@
 import numpy as np
 from astropy.io import fits
 from PyAstronomy.pyasl import read1dFitsSpec
+from PyAstronomy.pyasl import hmsToDeg, dmsToDeg
 
 
 def read_iraf_spec(fn, band=0):
@@ -38,6 +39,21 @@ def read_txt_spec(fn):
 
 def read_spec(fn):
     data = 123
+
+
+def get_ra_dec(fn):
+    strra = fits.getval(fn, 'RA')
+    strdec = fits.getval(fn, 'DEC')
+    if isinstance(strra, float):
+        return strra, strdec
+    if ':' in strra:
+        hh, mm, ss = [float(i) for i in strra.split(':')]
+        ra = hmsToDeg(hh, mm, ss)
+        dd, mm, ss = [float(i) for i in strdec.split(':')]
+        dec = dmsToDeg(dd, mm, ss)
+        return ra, dec
+    else:
+        return float(strra), float(strdec)
 
 
 class Spectrum(object):
