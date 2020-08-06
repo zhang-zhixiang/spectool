@@ -39,6 +39,24 @@ def shift_wave(wave, shift):
     return newave
 
 
+def legendre_polynomial(x, arrpar):
+    """get legendre polynomial values, x should be in the range of [-1, 1]
+
+    Args:
+        x (numpy.ndarray): Array
+        arrpar (list or numpy.ndarray): parameter of each degree
+
+    Returns:
+        numpy.ndarray: legendre polynomial values
+    """
+    return np.array(convol.legendre_poly(x, arrpar))
+
+
+def get_unit(data):
+    exp = int(np.log10(np.median(data)))
+    return 10**exp
+
+
 def normalize_wave(wave):
     """normalize the wavelength range to [-1, ..., 1]
 
@@ -93,7 +111,7 @@ def select_wave(wave, select_window=None):
     for win in select_window[1:]:
         lw, rw = win
         arg_tmp = (wave > lw) & (wave < rw)
-        arg = arg & arg_tmp
+        arg = arg | arg_tmp
     return np.where(arg)
 
 
