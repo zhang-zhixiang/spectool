@@ -2,6 +2,7 @@
 #include<vector>
 #include<numeric>
 #include<iostream>
+#include<algorithm>
 #include "rebin.h"
 #define NDEBUG
 #include <assert.h>
@@ -48,16 +49,32 @@ std::vector<wtf> ssort(const std::vector<wtf> & arr1, const std::vector<wtf> & a
     return result;
 }
 
-std::vector<wtf> merge_edge(const DARR & wave, const DARR & flux, const DARR & new_wave){
+std::vector<wtf> merge_edge(const DARR & wave, const DARR & flux, const DARR & new_wave, int endtype=0){
     auto edge1 = get_edge(wave);
     auto edge2 = get_edge(new_wave);
     std::vector<wtf> group1(edge1.size());
     std::vector<wtf> group2(edge2.size());
     for (size_t ind = 0; ind < wave.size(); ++ind)
         group1[ind] = {0, edge1[ind], flux[ind]}; // 0 indicates old wave edge
-    group1.back() = {0, edge1.back(), 0.0}; // the last edge flux should be 0
-    for ( size_t ind = 0; ind < edge2.size(); ++ind)
-        group2[ind] = {1, edge2[ind], 0.0}; //1 indicates new wave edge
+    if (endtype == 0 ) group1.back() = {0, edge1.back(), 0.0}; // the last edge flux should be 0
+    else group1.back() = {0, edge1.back(), flux.back()};
+
+    if (endtype == 0){
+        for ( size_t ind = 0; ind < edge2.size(); ++ind)
+            group2[ind] = {1, edge2[ind], 0.0}; //1 indicates new wave edge
+    } else {
+        size_t ind = 0;
+        while (edge2[ind] < edge1[0] && ind < edge2.size())
+        {
+            group2[ind] = {1, edge2[ind], flux.front()};
+            ++ind;
+        }
+        while (ind < edge2.size())
+        {
+            group2[ind] = {1, edge2[ind], flux.back()};
+            ++ind;
+        }
+    }
     auto sorted_data = ssort(group1, group2);
     for ( size_t ind = 1; ind < sorted_data.size(); ++ind)
         if ( sorted_data[ind].type == 1)
@@ -104,8 +121,8 @@ DARR rebin_err(const DARR & wave, const DARR & err, const DARR & new_wave){
     return new_err;
 }
 
-DARR rebin(const DARR & wave, const DARR & flux, const DARR & new_wave){
-    auto sorted_data = merge_edge(wave, flux, new_wave);
+DARR _rebin_proto(const DARR & wave, const DARR & flux, const DARR & new_wave, int end_type){
+    auto sorted_data = merge_edge(wave, flux, new_wave, end_type);
     DARR new_flux;
     double tmpflux = 0, w1 = 0, w2 = 0;
     size_t ind = 0;
@@ -125,18 +142,26 @@ DARR rebin(const DARR & wave, const DARR & flux, const DARR & new_wave){
     return new_flux;
 }
 
-
-int main(){
-    DARR wave = {1, 2, 3, 5, 9.0};
-    auto edge = get_edge(wave);
-    for ( auto v : wave)
-        std::cout << v << "  ";
-    std::cout << std::endl;
-    for ( auto & v : edge)
-        std::cout << v << "  ";
-    std::cout << std::endl;
-    DARR wave2 = {2, 3, 5, 6};
-    rebin(wave, wave, wave2);
-    rebin_err(wave, wave, wave2);
-    return 0;
+DARR rebin(const DARR & wave, const DARR & flux, const DARR & new_wave){
+    return _rebin_proto(wave, flux, new_wave, 0);
 }
+
+DARR rebin_padvalue(const DARR & wave, const DARR & flux, const DARR & new_wave){
+    return _rebin_proto(wave, flux, new_wave, 1);
+}
+
+
+// int main(){
+//     DARR wave = {1, 2, 3, 5, 9.0};
+//     auto edge = get_edge(wave);
+//     for ( auto v : wave)
+//         std::cout << v << "  ";
+//     std::cout << std::endl;
+//     for ( auto & v : edge)
+//         std::cout << v << "  ";
+//     std::cout << std::endl;
+//     DARR wave2 = {2, 3, 5, 6};
+//     rebin(wave, wave, wave2);
+//     rebin_err(wave, wave, wave2);
+//     return 0;
+// }
