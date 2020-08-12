@@ -39,6 +39,27 @@ def shift_wave(wave, shift):
     return newave
 
 
+def shift_wave_mutable(wave, arrpar, shifttype='velocity'):
+    """shift the wavelength, the delta_lambda can be different in each wave
+
+    Args:
+        wave (numpy.ndarray): wave arr
+        arrpar (list or numpy.ndarray): shift parameters
+        shifttype (str, optional): in the unit of 'velocity' or 'lambda'. Defaults to 'velocity'.
+
+    Returns:
+        numpy.ndarray: the wave after the wavelength shift
+    """
+    waveshift = np.zeros(wave.size)
+    tmpwave = wave / 10000
+    for ind, val in enumerate(arrpar):
+        waveshift = waveshift + (tmpwave**ind) * val
+    if shifttype == 'velocity':
+        waveshift = waveshift * wave * 1000 / c
+    newave = wave + waveshift
+    return newave
+
+
 def legendre_polynomial(x, arrpar):
     """get legendre polynomial values, x should be in the range of [-1, 1]
 
