@@ -7,4 +7,5 @@ from . import ccf
 from . import specio
 from . import spec_func
 from . import spec_filter
+from . import SpecMatch
 # from spectool.rebin import rebin
