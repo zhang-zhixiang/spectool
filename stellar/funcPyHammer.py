@@ -1,9 +1,16 @@
 import os
 import re
 import bisect
-from collections import OrderedDict
+import random
 import pickle
+import warnings
 import numpy as np
+from collections import OrderedDict
+from astropy.io import fits
+from scipy.interpolate import interp1d
+import matplotlib.pyplot as plt
+from ..spec_func import continuum
+from .. import ccf
 
 
 class MatchResult(object):
@@ -560,8 +567,82 @@ class Spectrum(object):
             return np.nan
         return self.thisDir + path + tempName
 
-    def findVelocity(self):
-        ccfWinLength = 200
+    def findVelocity(self, repeatime=100):
+        ccfWinLength = 300 # AA
+        wave = self._wavelength
+        flux = self._flux
+        plt.plot(wave, flux)
+        plt.show()
+        bestGuess = self._guess
+        fullTempName = self.getFullTempName()
+        if bestGuess['specType'] == -1:
+            return np.nan
+        with warnings.catch_warnings():
+            # Ignore a very particular warning from some versions of astropy.io.fits
+            # that is a known bug and causes no problems with loading fits data.
+            warnings.filterwarnings('ignore', message = 'Could not find appropriate MS Visual C Runtime ')
+            temp = fits.open(fullTempName)
+                                    
+        tempFlux = temp[1].data['flux']
+        tempWave = 10**temp[1].data['loglam']
+        tempFlux = Spectrum.normalize(tempWave, self._normWavelength, tempFlux)
+        arg_true = np.where(np.isfinite(flux))
+        wave_true = wave[arg_true]
+        print(wave)
+        print(wave_true)
+        wbegin = wave_true[0]
+        wend = wave_true[-1]
+        print('wbegin, wend = ', wbegin, wend)
+        wlength = wend - wbegin
+        wlength = wlength - ccfWinLength
+        ccfbinlst = np.arange(-1000, 1000, 0.7)
+        shiftlst = []
+        shiftlstccf = []
+        for ind in range(repeatime):
+            wfrom = random.random() * wlength + wbegin
+            wto = wfrom + ccfWinLength
+            arg = np.where((wave>wfrom) & (wave<wto))
+
+            contf = continuum(wave[arg], flux[arg])
+            contt = continuum(wave[arg], tempFlux[arg])
+            ccfresult = ccf.iccf_spec(wave[arg], contf, wave[arg], contt, ccfbinlst)
+            r, center, peak = ccf.get_ccf_info(ccfbinlst, ccfresult)
+            shiftlstccf.append(center)
+
+            # shift = float(self.xcorl(flux[arg], tempFlux[arg], 50, 'fine'))
+            shift = float(self.xcorl(contf, contt, 50, 'fine'))
+            shiftlst.append(shift)
+
+            plt.plot(wave[arg], contf)
+            plt.plot(wave[arg], contt)
+            plt.show()
+        # Convert to Radial Velocities
+        pixel = wave[1]-wave[0]
+        wave0 = (wave[1]+wave[0]) / 2
+        c = 299792.458 # km/s
+        radVelst = np.array([shift * pixel / wave0 * c for shift in shiftlst])
+        plt.scatter(np.arange(radVelst.size), radVelst)
+        plt.scatter(np.arange(len(shiftlstccf)), shiftlstccf)
+
+        median_x = np.median(radVelst)
+        std_x = np.std(radVelst)
+        plt.axhline(median_x, color='C0')
+        plt.axhline(median_x + std_x, color='C0', linestyle=':')
+        plt.axhline(median_x - std_x, color='C0', linestyle=':')
+        print('velocity xcorl = ', median_x, '+/-', std_x)
+
+        median_ccf = np.median(shiftlstccf)
+        std_ccf = np.std(shiftlstccf)
+        plt.axhline(median_ccf, color='C1')
+        plt.axhline(median_ccf + std_ccf, color='C1', linestyle=':')
+        plt.axhline(median_ccf - std_ccf, color='C1', linestyle=':')
+        print('velocity xcorl = ', median_ccf, '+/-', std_ccf)
+
+        plt.show()
+        radVelst = radVelst[np.isfinite(radVelst)]
+        # print(radVelst)
+
+
 
     def findRadialVelocity(self):
         """
@@ -607,7 +688,7 @@ class Spectrum(object):
         # I have it only using the spectral type and subtype for the original guess 
         # so I just cross correlate to the most common metallicity template for each spectral class
 
-        fullTempName = getFullTempName()
+        fullTempName = self.getFullTempName()
         if bestGuess['specType'] == -1:
             return np.nan
         # Open the template
