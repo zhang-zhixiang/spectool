@@ -9,4 +9,5 @@ from . import spec_func
 from . import spec_filter
 from . import SpecMatch
 from . import stellar
+from . import specinfo
 # from spectool.rebin import rebin

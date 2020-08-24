@@ -567,8 +567,51 @@ class Spectrum(object):
             return np.nan
         return self.thisDir + path + tempName
 
-    def findVelocity(self, repeatime=100):
-        ccfWinLength = 300 # AA
+    def findRadialVelocity(self, repeatime=100, ccfWinLength=300, velfrom=-1000, velend=1000, velstep=0.7):
+
+        # ccfWinLength = 300 # AA
+        wave = self._wavelength
+        flux = self._flux
+        bestGuess = self._guess
+        fullTempName = self.getFullTempName()
+        if bestGuess['specType'] == -1:
+            return np.nan
+        with warnings.catch_warnings():
+            # Ignore a very particular warning from some versions of astropy.io.fits
+            # that is a known bug and causes no problems with loading fits data.
+            warnings.filterwarnings('ignore', message = 'Could not find appropriate MS Visual C Runtime ')
+            temp = fits.open(fullTempName)
+                                    
+        tempFlux = temp[1].data['flux']
+        tempWave = 10**temp[1].data['loglam']
+        tempFlux = Spectrum.normalize(tempWave, self._normWavelength, tempFlux)
+        arg_true = np.where(np.isfinite(flux))
+        wave_true = wave[arg_true]
+
+        wbegin = wave_true[0]
+        wend = wave_true[-1]
+        wlength = wend - wbegin
+        wlength = wlength - ccfWinLength
+        ccfbinlst = np.arange(velfrom, velend, velstep)
+        # shiftlst = []
+        shiftlstccf = []
+        for ind in range(repeatime):
+            wfrom = random.random() * wlength + wbegin
+            wto = wfrom + ccfWinLength
+            # arg = np.where((wave>wfrom) & (wave<wto))
+            arg = np.where((wave>5200) & (wave<5500))
+
+            contf = continuum(wave[arg], flux[arg])
+            contt = continuum(wave[arg], tempFlux[arg])
+            ccfresult = ccf.iccf_spec(wave[arg], contf, wave[arg], contt, ccfbinlst)
+            r, center, peak = ccf.get_ccf_info(ccfbinlst, ccfresult)
+            shiftlstccf.append(center)
+        
+        return np.array(shiftlstccf)
+
+    def findRadialVelocity_test(self, repeatime=100, ccfWinLength=300, velfrom=-1000, velend=1000, velstep=0.7):
+
+        # ccfWinLength = 300 # AA
         wave = self._wavelength
         flux = self._flux
         plt.plot(wave, flux)
@@ -588,28 +631,28 @@ class Spectrum(object):
         tempFlux = Spectrum.normalize(tempWave, self._normWavelength, tempFlux)
         arg_true = np.where(np.isfinite(flux))
         wave_true = wave[arg_true]
-        print(wave)
-        print(wave_true)
+
         wbegin = wave_true[0]
         wend = wave_true[-1]
-        print('wbegin, wend = ', wbegin, wend)
         wlength = wend - wbegin
         wlength = wlength - ccfWinLength
-        ccfbinlst = np.arange(-1000, 1000, 0.7)
+        ccfbinlst = np.arange(velfrom, velend, velstep)
         shiftlst = []
         shiftlstccf = []
         for ind in range(repeatime):
             wfrom = random.random() * wlength + wbegin
             wto = wfrom + ccfWinLength
-            arg = np.where((wave>wfrom) & (wave<wto))
+            # arg = np.where((wave>wfrom) & (wave<wto))
+            arg = np.where((wave>5200) & (wave<5500))
 
             contf = continuum(wave[arg], flux[arg])
             contt = continuum(wave[arg], tempFlux[arg])
             ccfresult = ccf.iccf_spec(wave[arg], contf, wave[arg], contt, ccfbinlst)
             r, center, peak = ccf.get_ccf_info(ccfbinlst, ccfresult)
             shiftlstccf.append(center)
+        
 
-            # shift = float(self.xcorl(flux[arg], tempFlux[arg], 50, 'fine'))
+            # # shift = float(self.xcorl(flux[arg], tempFlux[arg], 50, 'fine'))
             shift = float(self.xcorl(contf, contt, 50, 'fine'))
             shiftlst.append(shift)
 
@@ -629,210 +672,19 @@ class Spectrum(object):
         plt.axhline(median_x, color='C0')
         plt.axhline(median_x + std_x, color='C0', linestyle=':')
         plt.axhline(median_x - std_x, color='C0', linestyle=':')
-        print('velocity xcorl = ', median_x, '+/-', std_x)
+        # print('velocity xcorl = ', median_x, '+/-', std_x)
 
         median_ccf = np.median(shiftlstccf)
         std_ccf = np.std(shiftlstccf)
         plt.axhline(median_ccf, color='C1')
         plt.axhline(median_ccf + std_ccf, color='C1', linestyle=':')
         plt.axhline(median_ccf - std_ccf, color='C1', linestyle=':')
-        print('velocity xcorl = ', median_ccf, '+/-', std_ccf)
+        # print('velocity ccf = ', median_ccf, '+/-', std_ccf)
 
         plt.show()
-        radVelst = radVelst[np.isfinite(radVelst)]
+        # radVelst = radVelst[np.isfinite(radVelst)]
         # print(radVelst)
-
-
-
-    def findRadialVelocity(self):
-        """
-        findRadialVelocity(spectrum)
-
-        Description:
-        Uses the cross-correlation technique. Most likely there is a pre-built
-        package for this so we won't start from the ground up.
-
-        Technique requires an at-rest reference spectrum with which to compare
-        to the observed input spectrum.
-
-        This method works best when the wavelengths are logarithmically spaced,
-        otherwise, a 2 pixel shift at the blue-end of the spectrum will return
-        a different radial velocity measurement than a 2 pixel shift at the red
-        end of the spectrum.
-
-        One thing that may be worth exploring is how to constrain the
-        uncertainty in the radial velocity measurement. Typically I repeat the
-        cross-correlation techniqe ~100 times across a few different wavelength
-        regimes and then find the mean/variance of that returned radial
-        velocities. There is probably a better way to do it.
-
-
-        Input:
-        Spectrum object - Should have the wavelength, flux, and noise of the
-        observed spectrum.
-        bestGuess template - The wavelength and flux of the bestGuess.
-
-        Output:
-        The radial velocity measurement and its associated uncertainty. Do we want
-        add the radialvelocity to the spectrum object? Or report just report it in
-        the output file.
-        """
-
-        #Get the flux and wavelength from the spectrum object 
-        #This should already be interpolated onto a log scale and normalized to 8000A (where templates are normalized)
-        wave = self._wavelength
-        flux = self._flux
-        bestGuess = self._guess
-
-        #open the correct template spectrum 
-        # I have it only using the spectral type and subtype for the original guess 
-        # so I just cross correlate to the most common metallicity template for each spectral class
-
-        fullTempName = self.getFullTempName()
-        if bestGuess['specType'] == -1:
-            return np.nan
-        # Open the template
-        with warnings.catch_warnings():
-            # Ignore a very particular warning from some versions of astropy.io.fits
-            # that is a known bug and causes no problems with loading fits data.
-            warnings.filterwarnings('ignore', message = 'Could not find appropriate MS Visual C Runtime ')
-            temp = fits.open(fullTempName)
-                                    
-        tempFlux = temp[1].data['flux']
-        tempWave = 10**temp[1].data['loglam']
-        tempFlux = Spectrum.normalize(tempWave, self._normWavelength, tempFlux)
-
-        # Get the regions for correlation
-        specRegion1 = np.where( (wave > 5000) & (wave < 6000) )
-        specRegion2 = np.where( (wave > 6000) & (wave < 7000) )
-        specRegion3 = np.where( (wave > 7000) & (wave < 8000) )
-        #noise regions: still not sure if we should have these or not
-        noiseRegion1 = np.where( (wave > 5000) & (wave < 5100) )
-        noiseRegion2 = np.where( (wave > 6800) & (wave < 6900) )
-        noiseRegion3 = np.where( (wave > 7400) & (wave < 7500) )
-        
-        #make sure the regions we are cross correlating have data
-        nonNanWave =  self._wavelength[np.where( np.isfinite(self._flux) )]
-
-        if nonNanWave[0] < 5000 and nonNanWave[-1] > 6000:
-            shift1 = float(self.xcorl(flux[specRegion1], tempFlux[specRegion1], 50, 'fine'))
-            snr1 = np.mean(flux[noiseRegion1]) / np.std(flux[noiseRegion1])
-            if nonNanWave[-1] > 7000:
-                shift2 = float(self.xcorl(flux[specRegion2], tempFlux[specRegion2], 50, 'fine'))
-                snr2 = np.mean(flux[noiseRegion2]) / np.std(flux[noiseRegion2])
-                if nonNanWave[-1] > 8000:
-                    shift3 = float(self.xcorl(flux[specRegion3], tempFlux[specRegion3], 50, 'fine'))
-                    snr3 = np.mean(flux[noiseRegion3]) / np.std(flux[noiseRegion3])
-                else:
-                    print('CAUTION: radial velocity may not be accurate, smaller wavelength region than tested on')
-                    shift3 = np.nan
-                    snr3 = np.nan
-            else:
-                print('CAUTION: radial velocity may not be accurate, smaller wavelength region than tested on')
-                shift2 = np.nan
-                snr2 = np.nan
-                shift3 = np.nan
-                snr3 = np.nan
-                
-        elif nonNanWave[0] > 5000 and nonNanWave[0] < 6000 and nonNanWave[-1] > 7000:
-            print('CAUTION: radial velocity may not be accurate, smaller wavelength region than tested on')
-            shift1 = np.nan
-            snr1 = np.nan
-            shift2 = float(self.xcorl(flux[specRegion2], tempFlux[specRegion2], 50, 'fine'))
-            snr2 = np.mean(flux[noiseRegion2]) / np.std(flux[noiseRegion2])
-            if nonNanWave[-1] > 8000:
-                shift3 = float(self.xcorl(flux[specRegion3], tempFlux[specRegion3], 50, 'fine'))
-                snr3 = np.mean(flux[noiseRegion3]) / np.std(flux[noiseRegion3])
-            else:
-                shift3 = np.nan
-                snr3 = np.nan
-
-        elif nonNanWave[0] > 6000 and nonNanWave[0] < 7000 and nonNanWave[-1] > 8000:
-            print('CAUTION: radial velocity may not be accurate, smaller wavelength region than tested on')
-            shift1 = np.nan
-            snr1 = np.nan
-            shift2 = np.nan
-            snr2 = np.nan
-            shift3 = float(self.xcorl(flux[specRegion3], tempFlux[specRegion3], 50, 'fine'))
-            snr3 = np.mean(flux[noiseRegion3]) / np.std(flux[noiseRegion3])
-
-        else:
-            print('Spectrum too short to compute accurate radial velocity')
-            rvFinal = np.nan
-            return rvFinal
-
-        # Convert to Radial Velocities
-        pixel = wave[1]-wave[0]
-        wave0 = (wave[1]+wave[0]) / 2
-        c = 299792.458 # km/s
-        radVel1 = shift1 * pixel / wave0 * c
-        radVel2 = shift2 * pixel / wave0 * c
-        radVel3 = shift3 * pixel / wave0 * c
-
-        # Look for convergence of the radial velocities
-        rvs = np.array([radVel1, radVel2, radVel3])
-        snrs = np.array([snr1, snr2, snr3])
-        #make sure none of the rvs are nans, if so get rid of them
-        rvs = rvs[np.isfinite(rvs)]
-
-        true = False
-        firstTime = 1
-        broke = False
-        while true == False:
-            trueCount = 0
-            chi = []
-
-            for rv_ in rvs:
-                #Start with highest signal-to-noise value
-                if firstTime == 1: 
-                    rvmed = rvs[np.where(snrs == np.max(snrs))]
-                else: 
-                    rvmed = np.median( rvs )
-                if rv_ == rvmed: 
-                    continue
-                if rvmed < 0:
-                    number = -10
-                    #print 'RV', rv_, 'MEDIAN', rvmed, 'LIMITS', rvmed + number,  rvmed - number, 'WITHIN?', rv_ > rvmed + number and rv_ < rvmed - number
-                    if rv_ < (rvmed + number) or rv_ > (rvmed - number):
-                        chi.append( [rv_ , abs( rv_ - rvmed )] )
-                        #rvs = np.delete(rvs, np.where(rvs == rv_))
-                        trueCount += 1
-                else:
-                    number = 10
-                    #print 'RV', rv_, 'MEDIAN', rvmed, 'LIMITS', rvmed + number,  rvmed - number, 'WITHIN?', rv_ < rvmed + number and rv_ > rvmed - number
-                    if rv_ > (rvmed + number) or rv_ < (rvmed - number):
-                        chi.append( [rv_ , abs( rv_ - rvmed )] )
-                        #rvs = np.delete(rvs, np.where(rvs == rv_))
-                        trueCount += 1
-            #print 'TRUECOUNT', trueCount
-            firstTime = 0
-            if trueCount == 0:
-                true = True
-                break
-            if trueCount == 2:
-                true=True
-                #print('BROKEN')
-                broke = True
-                break
-            #print 'START CHI'
-            chi = np.array(chi)
-            #print chi
-            #print chi[:,1]
-            #print np.max(chi[:,1])
-            #print chi[:,0][np.where(chi[:,1] == np.max(chi[:,1]))]
-            #print np.where(rvs == chi[:,0][np.where(chi[:,1] == np.max(chi[:,1]))])[0]
-            #print 'DROPPING', rvs[np.where(rvs == chi[:,0][np.where(chi[:,1] == np.max(chi[:,1]))])[0]]
-            #print 'LENGTH', len(chi)
-            if len(chi) > 0:
-                #print 'DELETING'
-                rvs = np.delete(rvs, np.where(rvs == chi[:,0][np.where(chi[:,1] == np.max(chi[:,1]))])[0])
-            #print 'End', rvs
-            if trueCount == 0: 
-                true = True
-        #print rvs
-        rvFinal = np.mean( rvs )
-
-        return rvFinal
+        return np.array(shiftlstccf)
 
     def shfour(self, sp, shift, *args):
 

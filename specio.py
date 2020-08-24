@@ -2,6 +2,7 @@ import numpy as np
 from astropy.io import fits
 from PyAstronomy.pyasl import read1dFitsSpec
 from PyAstronomy.pyasl import hmsToDeg, dmsToDeg
+from . import spec_func
 
 
 def read_iraf_spec(fn, band=0):
@@ -24,6 +25,46 @@ def read_lte_spec(fn):
     flux = data['FLUX'].astype('float64')
     bflux = data['BBFLUX'].astype('float64')
     return wave, flux, bflux
+
+
+def read_lamost_low(fn):
+    # fit = fits.open(fn)
+    # first = fit[0].header['CRVAL1']
+    # step = fit[0].header['CD1_1']
+    # length = fit[0].header['NAXIS1']
+    # logwave = np.arange(length)*step + first
+    # wave = 10**logwave
+    # flux = fit[0].data[0, :]
+    # data = fit[0].data
+    # invar = data[1, :].astype('float64')
+    # arg = np.where(invar == 0)
+    # invar[arg] = 1
+    # err = 1 / invar.astype('float64')
+    # err[arg] = np.inf
+    # return wave, flux, err
+
+
+    hdul = fits.open(fn)
+    data = hdul[0].data
+    wave = data[2, :].astype('float64')
+    flux = data[0, :].astype('float64')
+    invar = data[1, :].astype('float64')
+    arg = np.where(invar == 0)
+    invar[arg] = 1
+    err = 1 / invar.astype('float64')
+    err[arg] = np.inf
+    arg = np.argsort(wave)
+    return wave[arg], flux[arg], err[arg]
+
+
+def read_lamost_med(fn, hduid):
+    data = fits.getdata(fn, ext=hduid)
+    wave = 10**data['loglam'].astype('float64')
+    flux = data['flux'].astype('float64')
+    arg = np.argsort(wave)
+    wave = wave[arg]
+    flux = flux[arg]
+    return wave, flux, None
 
 
 def read_txt_spec(fn):

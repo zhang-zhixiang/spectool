@@ -198,6 +198,10 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False):
     def func(x, *par):
         return np.array(convol.legendre_poly(x, par))
 
+    arg = np.where(np.isfinite(wave) & np.isfinite(flux))
+    wave = wave[arg]
+    flux = flux[arg]
+
     newave = normalize_wave(wave)
     newave2 = newave.copy()
 
