@@ -3,6 +3,7 @@ from . import spec_func
 from . import spec_filter
 from . import convol
 from lmfit import Parameters
+from lmfit.models import GaussianModel
 
 
 def get_scale_model(degree=15):
