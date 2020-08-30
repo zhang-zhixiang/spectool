@@ -24,6 +24,25 @@ def air2vac(wave):
     return (1+coef) * wave
 
 
+def median_reject_cos(flux, size=20):
+    """reject the cosmic ray using the median filter
+
+    Args:
+        flux (numpy.ndarray): spectral flux
+        size (int, optional): median filter size. Defaults to 20.
+
+    Returns:
+        new_flux(numpy.ndarray): the spectral flux after removing the cosmic ray
+    """
+    med_flux = median_filter(flux, size=size)
+    res = flux - med_flux
+    std = np.std(res)
+    arg = np.where(res > 3*std)
+    new_flux = flux
+    new_flux[arg] = med_flux[arg]
+    return new_flux
+
+
 def shift_wave(wave, shift):
     """shift the wavelength in the unit of km/s
 
