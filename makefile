@@ -1,40 +1,20 @@
 FLAG = -fPIC -std=c++14 -O3
-PY_CFLAGS  := $(shell python3-config --includes)
+PY_CFLAGS := $(shell python3-config --includes)
+PYBIND11 := $(shell python3 -m pybind11 --includes)
 GSL = -lgsl -lgslcblas
 CC = g++
 SHARE = -shared
 
-objects = convol.o convol_wrap.o
+default : convol.so rebin.so libccf.so
 
-default : _convol.so _rebin.so libccf.so
+convol.so : convol.cpp
+	$(CC) convol.cpp -o convol.so $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(GSL)
 
-_convol.so : $(objects)
-	$(CC) -o _convol.so $(objects) $(SHARE) $(GSL)
-
-convol.o : convol.cpp convol.h
-	$(CC) -c convol.cpp $(FLAG) $(GSL)
-
-convol_wrap.o : convol_wrap.cxx
-	$(CC) -c convol_wrap.cxx $(FLAG) $(PY_CFLAGS)
-
-convol_wrap.cxx : convol.i
-	swig -python -c++ convol.i
-
-_rebin.so : rebin.o rebin_wrap.o
-	$(CC) -o _rebin.so rebin.o rebin_wrap.o $(SHARE)
-
-rebin.o : rebin.cpp
-	$(CC) -c rebin.cpp $(FLAG)
-
-rebin_wrap.o : rebin_wrap.cxx
-	$(CC) -c rebin_wrap.cxx $(FLAG) $(PY_CFLAGS)
-
-rebin_wrap.cxx : rebin.i
-	swig -python -c++ rebin.i
+rebin.so : rebin.cpp
+	$(CC) rebin.cpp -o rebin.so $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11)
 
 libccf.so : iccf.cpp
-	$(CC) iccf.cpp -o libccf.so $(FLAG) $(SHARE) $(PY_CFLAGS)
+	$(CC) iccf.cpp -o libccf.so $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11)
 
 clean :
-	rm _convol.so $(objects) convol_wrap.cxx convol.py \
-	_rebin.so rebin.o rebin_wrap.o rebin_wrap.cxx rebin.py libccf.so
+	rm convol.so rebin.so libccf.so

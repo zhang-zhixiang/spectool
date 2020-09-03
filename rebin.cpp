@@ -6,6 +6,7 @@
 #include "rebin.h"
 #define NDEBUG
 #include <assert.h>
+#include "pybind11/stl.h"
 
 #define DARR std::vector<double>
 
@@ -150,18 +151,12 @@ DARR rebin_padvalue(const DARR & wave, const DARR & flux, const DARR & new_wave)
     return _rebin_proto(wave, flux, new_wave, 1);
 }
 
+PYBIND11_MODULE(rebin, m)
+{
+    // xt::import_numpy();
+    m.doc() = "rebin the spectrum and ensure the flux conservation";
 
-// int main(){
-//     DARR wave = {1, 2, 3, 5, 9.0};
-//     auto edge = get_edge(wave);
-//     for ( auto v : wave)
-//         std::cout << v << "  ";
-//     std::cout << std::endl;
-//     for ( auto & v : edge)
-//         std::cout << v << "  ";
-//     std::cout << std::endl;
-//     DARR wave2 = {2, 3, 5, 6};
-//     rebin(wave, wave, wave2);
-//     rebin_err(wave, wave, wave2);
-//     return 0;
-// }
+    m.def("rebin", rebin, "rebin the input spectrum and ensure the input flux conservation\ninput par: wave, flux, new_flux\nCaution: \nthe wavelength out of the spectrum is filled with 0, like this\n ..., 0, 0, 0, f1, ..., fn, 0, 0, 0, ...");
+    m.def("rebin_padvalue", rebin_padvalue, "rebin the input spectrum and ensure the input flux conservation\ninput par: wave, flux, new_flux\nCaution: \nthe wavelength out of the spectrum is filled with the first and last value, like this\n ..., f1, f1, f1, f1, ..., fn, fn, fn, fn, ...");
+    m.def("rebin_err", rebin_err, "rebin the spectrum err\n input par: wave, err, new_wave");
+}

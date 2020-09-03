@@ -195,5 +195,5 @@ PYBIND11_MODULE(libccf, m)
 
     m.def("iccf", iccf, "Sum the sines of the input values");
     m.def("iccf_mc", iccf_mc, "run FR/RSS to estimate the error bar");
-    m.def("iccf_spec", iccf_spec, "CCF function of two spectra");
+    m.def("iccf_spec", iccf_spec, "CCF function of two spectra\ninput par:\n  wave, flux, wave_ref, flux_ref, shiftlist(velocity)");
 }

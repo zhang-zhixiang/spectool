@@ -5,6 +5,7 @@
 #include <iostream>
 #include <iomanip>
 #include <gsl/gsl_sf_legendre.h>
+#include "pybind11/stl.h"
 #include "convol.h"
 
 
@@ -219,21 +220,12 @@ ARR gauss_filter(const ARR & wave, const ARR & flux, const ARR & arrpar){
     return outflux;
 }
 
+PYBIND11_MODULE(convol, m)
+{
+    // xt::import_numpy();
+    m.doc() = " ";
 
-int main(){
-    std::cout << gaussian(0, 1, 0) << std::endl;
-    std::cout << gaussian(-1, 1, 0) << std::endl;
-    std::cout << gaussian(1, 1, 0) << std::endl;
-    ARR arrtest = {-1, 0, 1};
-    ARR result = gaussian(arrtest, 1, 0);
-    for ( auto val : result)
-        std::cout << val << std::endl;
-    size_t arrsize = 8;
-    double arrpoly[arrsize];
-    for ( size_t ind = 0; ind < arrsize; ++ind) arrpoly[ind] = 0;
-    gsl_sf_legendre_Pl_array(5, 0.5, arrpoly);
-    for(size_t ind = 0; ind < arrsize; ++ind)
-        std::cout << arrpoly[ind] << "  ";
-    std::cout << std::endl;
-    return 0;
+    m.def("gauss_filter", gauss_filter, "Smooth the input spectrum\ninput par: wave, flux, arrpar");
+    m.def("gauss_filter_mutable", gauss_filter_mutable, "Smooth the input spectrum\ninput par: wave, flux, arrvelocity");
+    m.def("legendre_poly", legendre_poly, "legendre polynomial function\ninput par: arrx, arrpar\nCaution: Please ensure -1 < arrx < 1!");
 }
