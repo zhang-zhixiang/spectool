@@ -1,4 +1,4 @@
-FLAG = -fPIC -std=c++14 -O3
+FLAG = -fPIC -std=c++17 -O3
 PY_CFLAGS := $(shell python3-config --includes)
 PYBIND11 := $(shell python3 -m pybind11 --includes)
 GSL = -lgsl -lgslcblas

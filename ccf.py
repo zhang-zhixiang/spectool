@@ -4,6 +4,10 @@ from . import libccf
 from . import spec_func
 
 
+def find_radial_velocity(wave, flux, wave_ref, flux_ref):
+    return 0.0
+
+
 def iccf_spec(wave, flux, wave_ref, flux_ref, shiftlst, mask=None):
     """get the ccf result of a spectrum with the reference spectrum
 
