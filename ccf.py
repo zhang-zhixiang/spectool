@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 from . import libccf
@@ -35,7 +36,7 @@ def shiftspec(flux, shift):
     return newsp
 
 
-def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False):
+def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0):
     c = 299792.458 # km/s
     logwave = np.log(wave)
     logwave_ref = np.log(wave_ref)
@@ -50,9 +51,40 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False):
     cont_ref = spec_func.continuum(newave, newflux_ref)
     norm_cont = (cont - np.mean(cont)) / np.std(cont)
     norm_cont_ref = (cont_ref - np.mean(cont_ref)) / np.std(cont_ref)
-    arrvelovity = np.arange(-800, 800, 1.0)
-    shiftlst = arrvelovity / c / log_delta_w
-    select_range = int(shiftlst[-1])
+    # arrvelovity = np.arange(-800, 800, 1.0)
+    # here the code is modified to first and second loops, in order to save the computation
+    shiftleft = int(math.floor(ccfleft / c / log_delta_w))
+    shiftright = int(math.ceil(ccfright / c / log_delta_w))
+    shiftlst = np.arange(shiftleft, shiftright+1)
+    select_range = max(abs(shiftlst[0]), abs(shiftlst[-1]))
+    ccf_valuelst = []
+    for shift in shiftlst:
+        norm_cont_shift = shiftspec(norm_cont, shift)
+        if mult is True:
+            mul_val = norm_cont_shift[select_range:-select_range] * norm_cont_ref[select_range:-select_range]
+            ccf_val = np.abs(np.sum(mul_val))
+            # ccf_valuelst.append(ccf_val)
+        else:
+            dif_val = norm_cont_shift[select_range:-select_range] - norm_cont_ref[select_range:-select_range]
+            ccf_val = np.sum(np.real(dif_val * dif_val))
+        ccf_valuelst.append(ccf_val)
+    if plot is True:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(shiftlst, ccf_valuelst)
+        # plt.show()
+    if mult is True:
+        index = np.argmax(ccf_valuelst)
+    else:
+        index = np.argmin(ccf_valuelst)
+    measure_shift = shiftlst[index]
+    delta_shift = velocity_resolution / c / log_delta_w
+    if delta_shift > 1:
+        if plot is True:
+            plt.show()
+        return measure_shift * log_delta_w * c
+
+    shiftlst = np.arange(measure_shift-1, measure_shift+1, delta_shift)
     ccf_valuelst = []
     for shift in shiftlst:
         norm_cont_shift = shiftspec(norm_cont, shift)
@@ -71,8 +103,6 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False):
     measure_shift = shiftlst[index]
     velocity = measure_shift * log_delta_w * c
     if plot is True:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
         ax.plot(shiftlst, ccf_valuelst)
         plt.show()
     return velocity
