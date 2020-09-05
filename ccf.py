@@ -2,10 +2,80 @@ import numpy as np
 import matplotlib.pyplot as plt
 from . import libccf
 from . import spec_func
+from . import rebin
 
 
-def find_radial_velocity(wave, flux, wave_ref, flux_ref):
-    return 0.0
+def shiftspec(flux, shift):
+
+    sp = flux
+
+    ln = len(sp)
+    nsp = sp
+
+    # Take the inverse Fourier transform and multiply by length to put it in IDL terms
+    fourtr = np.fft.ifft(nsp) * len(nsp)   
+    sig = np.arange(ln)/float(ln) - .5
+    sig = np.roll(sig, int(ln/2))
+    sh = sig*2. * np.pi * shift
+
+    count=0
+    shfourtr = np.zeros( (len(sh), 2) )
+    complexarr2 = np.zeros( len(sh), 'complex' )
+    for a,b in zip(np.cos(sh), np.sin(sh)):
+        comps = complex(a,b)
+        complexarr2[count] = comps
+        count+=1
+
+    shfourtr = complexarr2 * fourtr
+
+    # Take the Fourier transform
+    newsp = np.fft.fft(shfourtr) / len(shfourtr)
+    newsp = newsp[0:ln]
+
+    return newsp
+
+
+def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False):
+    c = 299792.458 # km/s
+    logwave = np.log(wave)
+    logwave_ref = np.log(wave_ref)
+    log_delta_w = np.min(np.diff(logwave))
+    logwbegin = min(logwave[0], logwave_ref[0])
+    logwend = max(logwave[-1], logwave_ref[-1])
+    lognewave = np.arange(logwbegin, logwend, log_delta_w)
+    newave = np.exp(lognewave)
+    newflux = np.array(rebin.rebin(wave, flux, newave))
+    newflux_ref = np.array(rebin.rebin(wave_ref, flux_ref, newave))
+    cont = spec_func.continuum(newave, newflux)
+    cont_ref = spec_func.continuum(newave, newflux_ref)
+    norm_cont = (cont - np.mean(cont)) / np.std(cont)
+    norm_cont_ref = (cont_ref - np.mean(cont_ref)) / np.std(cont_ref)
+    arrvelovity = np.arange(-800, 800, 1.0)
+    shiftlst = arrvelovity / c / log_delta_w
+    select_range = int(shiftlst[-1])
+    ccf_valuelst = []
+    for shift in shiftlst:
+        norm_cont_shift = shiftspec(norm_cont, shift)
+        if mult is True:
+            mul_val = norm_cont_shift[select_range:-select_range] * norm_cont_ref[select_range:-select_range]
+            ccf_val = np.abs(np.sum(mul_val))
+            # ccf_valuelst.append(ccf_val)
+        else:
+            dif_val = norm_cont_shift[select_range:-select_range] - norm_cont_ref[select_range:-select_range]
+            ccf_val = np.sum(np.real(dif_val * dif_val))
+        ccf_valuelst.append(ccf_val)
+    if mult is True:
+        index = np.argmax(ccf_valuelst)
+    else:
+        index = np.argmin(ccf_valuelst)
+    measure_shift = shiftlst[index]
+    velocity = measure_shift * log_delta_w * c
+    if plot is True:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(shiftlst, ccf_valuelst)
+        plt.show()
+    return velocity
 
 
 def iccf_spec(wave, flux, wave_ref, flux_ref, shiftlst, mask=None):
