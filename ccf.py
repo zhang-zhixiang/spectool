@@ -37,6 +37,23 @@ def shiftspec(flux, shift):
 
 
 def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0):
+    """find the radial velocity using ccf method
+
+    Args:
+        wave (numpy.ndarray): spectral wave
+        flux (numpy.ndarray): spectral flux
+        wave_ref (numpy.ndarray): the spectral wave of template
+        flux_ref (numpy.ndarray): the spectral flux of template
+        mult (bool, optional): use multiplication to cal the ccf value, else use diff. Defaults to True.
+        plot (bool, optional): whether plot the ccf profile. Defaults to False.
+        ccfleft (int, optional): the left edge of ccf funtion, in the unit of km/s. Defaults to -800.
+        ccfright (int, optional): the right edge of ccf function, in the unit of km/s. Defaults to 800.
+        velocity_resolution (float, optional): the velocity resolution of ccf, in the unit of km/s. Defaults to 1.0.
+
+    Returns:
+        velocity(float, km/s): the velocity of the spectrum compared with the template. Here positive value means red shift,
+        negative value means blue shift.
+    """
     c = 299792.458 # km/s
     logwave = np.log(wave)
     logwave_ref = np.log(wave_ref)
@@ -82,7 +99,7 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     if delta_shift > 1:
         if plot is True:
             plt.show()
-        return measure_shift * log_delta_w * c
+        return -measure_shift * log_delta_w * c
 
     shiftlst = np.arange(measure_shift-1, measure_shift+1, delta_shift)
     ccf_valuelst = []
@@ -105,7 +122,7 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     if plot is True:
         ax.plot(shiftlst, ccf_valuelst)
         plt.show()
-    return velocity
+    return -velocity
 
 
 def iccf_spec(wave, flux, wave_ref, flux_ref, shiftlst, mask=None):
