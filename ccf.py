@@ -73,15 +73,16 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     shiftlst = np.arange(shiftleft, shiftright+1)
     select_range = max(abs(shiftlst[0]), abs(shiftlst[-1]))
     ccf_valuelst = []
+    count_pixels = norm_cont[select_range:-select_range].size
     for shift in shiftlst:
         norm_cont_shift = shiftspec(norm_cont, shift)
         if mult is True:
             mul_val = norm_cont_shift[select_range:-select_range] * norm_cont_ref[select_range:-select_range]
-            ccf_val = np.abs(np.sum(mul_val))
+            ccf_val = np.abs(np.sum(mul_val)) / count_pixels
             # ccf_valuelst.append(ccf_val)
         else:
             dif_val = norm_cont_shift[select_range:-select_range] - norm_cont_ref[select_range:-select_range]
-            ccf_val = np.sum(np.real(dif_val * dif_val))
+            ccf_val = np.sum(np.real(dif_val * dif_val)) / count_pixels
         ccf_valuelst.append(ccf_val)
     if plot is True:
         fig = plt.figure()
@@ -105,11 +106,11 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
         norm_cont_shift = shiftspec(norm_cont, shift)
         if mult is True:
             mul_val = norm_cont_shift[select_range:-select_range] * norm_cont_ref[select_range:-select_range]
-            ccf_val = np.abs(np.sum(mul_val))
+            ccf_val = np.abs(np.sum(mul_val)) / count_pixels
             # ccf_valuelst.append(ccf_val)
         else:
             dif_val = norm_cont_shift[select_range:-select_range] - norm_cont_ref[select_range:-select_range]
-            ccf_val = np.sum(np.real(dif_val * dif_val))
+            ccf_val = np.sum(np.real(dif_val * dif_val)) / count_pixels
         ccf_valuelst.append(ccf_val)
     if mult is True:
         index = np.argmax(ccf_valuelst)
