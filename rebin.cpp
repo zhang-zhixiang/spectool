@@ -8,6 +8,8 @@
 #include <assert.h>
 #include "pybind11/stl.h"
 
+#include "types.h"
+
 #define DARR std::vector<double>
 
 DARR get_edge(const DARR & wave){
@@ -151,12 +153,24 @@ DARR rebin_padvalue(const DARR & wave, const DARR & flux, const DARR & new_wave)
     return _rebin_proto(wave, flux, new_wave, 1);
 }
 
+py::array_t<double> numpy_rebin(const DARR & wave, const DARR & flux, const DARR & new_wave){
+    return VEC2numpyarr(rebin(wave, flux, new_wave));
+}
+
+py::array_t<double> numpy_rebin_padvalue(const DARR & wave, const DARR & flux, const DARR & new_wave){
+    return VEC2numpyarr(rebin_padvalue(wave, flux, new_wave));
+}
+
+py::array_t<double> numpy_rebin_err(const DARR & wave, const DARR & err, const DARR & new_wave){
+    return VEC2numpyarr(rebin_err(wave, err, new_wave));
+}
+
 PYBIND11_MODULE(rebin, m)
 {
     // xt::import_numpy();
     m.doc() = "rebin the spectrum and ensure the flux conservation";
 
-    m.def("rebin", rebin, "rebin the input spectrum and ensure the input flux conservation\ninput par: wave, flux, new_flux\nCaution: \nthe wavelength out of the spectrum is filled with 0, like this\n ..., 0, 0, 0, f1, ..., fn, 0, 0, 0, ...");
-    m.def("rebin_padvalue", rebin_padvalue, "rebin the input spectrum and ensure the input flux conservation\ninput par: wave, flux, new_flux\nCaution: \nthe wavelength out of the spectrum is filled with the first and last value, like this\n ..., f1, f1, f1, f1, ..., fn, fn, fn, fn, ...");
-    m.def("rebin_err", rebin_err, "rebin the spectrum err\n input par: wave, err, new_wave");
+    m.def("rebin", numpy_rebin, "rebin the input spectrum and ensure the input flux conservation\ninput par: wave, flux, new_flux\nCaution: \nthe wavelength out of the spectrum is filled with 0, like this\n ..., 0, 0, 0, f1, ..., fn, 0, 0, 0, ...");
+    m.def("rebin_padvalue", numpy_rebin_padvalue, "rebin the input spectrum and ensure the input flux conservation\ninput par: wave, flux, new_flux\nCaution: \nthe wavelength out of the spectrum is filled with the first and last value, like this\n ..., f1, f1, f1, f1, ..., fn, fn, fn, fn, ...");
+    m.def("rebin_err", numpy_rebin_err, "rebin the spectrum err\n input par: wave, err, new_wave");
 }

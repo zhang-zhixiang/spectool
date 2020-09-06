@@ -2,9 +2,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 from . import libccf
 from . import spec_func
+from . import rebin
 
 
 def find_radial_velocity(wave, flux, wave_ref, flux_ref):
+    logwave = np.log10(wave)
+    logwave_ref = np.log10(wave)
+    logdifw = np.diff(logwave)
+    logdifw_ref = np.diff(logwave_ref)
+    logmindifw = min(np.min(logdifw), np.min(logdifw_ref))
+    logwbegin = max(logwave[0], logwave_ref[0])
+    logwend = min(logwave[-1], logwave_ref[-1])
+    lognewave = np.arange(logwbegin, logwend, logmindifw)
+    newave = 10**lognewave
+    newflux = rebin.rebin(wave, flux, newave)
+    newflux_ref = rebin.rebin(wave_ref, flux_ref, newave)
+
     return 0.0
 
 

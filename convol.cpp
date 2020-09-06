@@ -7,6 +7,7 @@
 #include <gsl/gsl_sf_legendre.h>
 #include "pybind11/stl.h"
 #include "convol.h"
+#include "types.h"
 
 
 // Please ensure -1 < arrx < 1
@@ -220,12 +221,24 @@ ARR gauss_filter(const ARR & wave, const ARR & flux, const ARR & arrpar){
     return outflux;
 }
 
+py::array_t<double> numpy_gauss_filter(const ARR & wave, const ARR & flux, const ARR & arrpar){
+    return VEC2numpyarr(gauss_filter(wave, flux, arrpar));
+}
+
+py::array_t<double> numpy_gauss_filter_mutable(const ARR & wave, const ARR & flux, const ARR & arrvelocity){
+    return VEC2numpyarr(gauss_filter_mutable(wave, flux, arrvelocity));
+}
+
+py::array_t<double> numpy_legendre_poly( const ARR & arrx, const ARR & arrpar){
+    return VEC2numpyarr(legendre_poly(arrx, arrpar));
+}
+
 PYBIND11_MODULE(convol, m)
 {
     // xt::import_numpy();
     m.doc() = " ";
 
-    m.def("gauss_filter", gauss_filter, "Smooth the input spectrum\ninput par: wave, flux, arrpar");
-    m.def("gauss_filter_mutable", gauss_filter_mutable, "Smooth the input spectrum\ninput par: wave, flux, arrvelocity");
-    m.def("legendre_poly", legendre_poly, "legendre polynomial function\ninput par: arrx, arrpar\nCaution: Please ensure -1 < arrx < 1!");
+    m.def("gauss_filter", numpy_gauss_filter, "Smooth the input spectrum\ninput par: wave, flux, arrpar");
+    m.def("gauss_filter_mutable", numpy_gauss_filter_mutable, "Smooth the input spectrum\ninput par: wave, flux, arrvelocity");
+    m.def("legendre_poly", numpy_legendre_poly, "legendre polynomial function\ninput par: arrx, arrpar\nCaution: Please ensure -1 < arrx < 1!");
 }

@@ -7,6 +7,7 @@
 #include <algorithm>
 // #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
+#include "types.h"
 // #include <gsl/gsl_statistics_double.h>
 
 
@@ -188,12 +189,29 @@ auto iccf_mc(const VEC& w1, const VEC& f1, const VEC& err1,
     return iccf_mc_pre(w1, f1, err1, w2, f2, err2, shift, mc_num, LC);
 }
 
+py::array_t<double> numpy_iccf(const VEC& w1, const VEC& f1, const VEC& w2, const VEC& f2, const VEC& shift){
+    return VEC2numpyarr(iccf(w1, f1, w2, f2, shift));
+}
+
+auto numpy_iccf_mc(const VEC& w1, const VEC& f1, const VEC& err1,
+            const VEC& w2, const VEC& f2, const VEC& err2,
+            const VEC& shift, int mc_num){
+    auto [peaklst, centerlst] = iccf_mc(w1, f1, err1, w2, f2, err2, shift, mc_num);
+    auto numpy_peak = VEC2numpyarr(peaklst);
+    auto numpy_center = VEC2numpyarr(centerlst);
+    return std::make_tuple(numpy_peak, numpy_center);
+}
+
+py::array_t<double> numpy_iccf_spec( const VEC& w1, const VEC& f1, const VEC& w2, const VEC& f2, const VEC& shift){
+    return VEC2numpyarr(iccf_spec(w1, f1, w2, f2, shift));
+}
+
 PYBIND11_MODULE(libccf, m)
 {
     // xt::import_numpy();
     m.doc() = "A ICCF package, return ";
 
-    m.def("iccf", iccf, "Sum the sines of the input values");
-    m.def("iccf_mc", iccf_mc, "run FR/RSS to estimate the error bar");
-    m.def("iccf_spec", iccf_spec, "CCF function of two spectra\ninput par:\n  wave, flux, wave_ref, flux_ref, shiftlist(velocity)");
+    m.def("iccf", numpy_iccf, "Sum the sines of the input values");
+    m.def("iccf_mc", numpy_iccf_mc, "run FR/RSS to estimate the error bar");
+    m.def("iccf_spec", numpy_iccf_spec, "CCF function of two spectra\ninput par:\n  wave, flux, wave_ref, flux_ref, shiftlist(velocity)");
 }
