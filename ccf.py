@@ -8,13 +8,11 @@ from . import rebin
 
 def shiftspec(flux, shift):
 
-    sp = flux
-
-    ln = len(sp)
-    nsp = sp
+    ln = len(flux)
+    nsp = flux
 
     # Take the inverse Fourier transform and multiply by length to put it in IDL terms
-    fourtr = np.fft.ifft(nsp) * len(nsp)   
+    fourtr = np.fft.ifft(nsp) * len(nsp)
     sig = np.arange(ln)/float(ln) - .5
     sig = np.roll(sig, int(ln/2))
     sh = sig*2. * np.pi * shift
@@ -134,7 +132,7 @@ def iccf_spec(wave, flux, wave_ref, flux_ref, shiftlst, mask=None):
         wave_ref (numpy.ndarray(float64)): reference wave
         flux_ref (numpy.ndarray(float64)): reference flux
         shiftlst (numpy.ndarray(float64) or float list): velocity shift of the spectrum in the unit of km/s
-        mask (list [[l1, r1], [l2, r2], ...], optional): mask window when computing ccf result. 
+        mask (list [[l1, r1], [l2, r2], ...], optional): mask window when computing ccf result.
         Attention, we only mask the spectrum (wave, flux), not including
         reference spectrum (wave_ref, flux_ref) Defaults to None.
 
