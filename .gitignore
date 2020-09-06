@@ -1,0 +1,4 @@
+*.so
+*.dylib
+__pycache__/
+stellar/__pycache__/
