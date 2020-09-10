@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <type_traits>
+#include <complex>
 #include <fftw3.h>
 
 typedef std::vector<double> VEC;
@@ -10,11 +11,12 @@ typedef const std::vector<double> CVEC;
 
 class Shift_spec {
     // The code refer the example code in blog https://www.cnblogs.com/aiguona/p/9407425.html
-    fftw_complex * _in, * _out;
+    std::complex<double> * _in, * _out;
     fftw_plan _p;
     size_t _size;
     double * _sig;
     double * _sh;
+    std::complex<double> * _complexarr;
     double _shift;
     void ini_par(int size);
     void destroy_par();
@@ -30,10 +32,13 @@ public:
 void Shift_spec::destroy_par(){
     if (_in != nullptr){
         fftw_destroy_plan(_p);
-        fftw_free(_in);
-        fftw_free(_out);
+        // fftw_free(_in);
+        // fftw_free(_out);
+        delete [] _in;
+        delete [] _out;
         delete [] _sig;
         delete [] _sh;
+        delete [] _complexarr;
         delete [] specout;
         _p = nullptr;
         _in = nullptr;
@@ -48,11 +53,17 @@ void Shift_spec::destroy_par(){
 void Shift_spec::ini_par(int size){
     if (_in != nullptr) destroy_par();
     _size = size;
-    _in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * size);
-    _out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * size);
-    _p = fftw_plan_dft_1d(_size, _in, _out, FFTW_FORWARD, FFTW_ESTIMATE);
+    // _in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * size);
+    // _out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * size);
+    _in = new std::complex<double>[_size];
+    _out = new std::complex<double>[_size];
+    _p = fftw_plan_dft_1d(_size,
+                          reinterpret_cast<fftw_complex*>(_in),
+                          reinterpret_cast<fftw_complex*>(_out),
+                          FFTW_FORWARD, FFTW_ESTIMATE);
     _sig = new double[_size];
     _sh = new double[_size];
+    _complexarr = new std::complex<double>[_size];
     specout = new double[_size];
 
     double doublesize = double(_size);
@@ -71,8 +82,14 @@ bool Shift_spec::set_spec(CVEC & spec){
 
 double * Shift_spec::shift_spec(double shift){
     _shift = shift;
+    for (size_t ind = 0; ind < _size; ++ind){
+        auto a = cos(_sig[ind]*shift);
+        auto b = sin(_sig[ind]*shift);
+        reinterpret_cast<double*>(_complexarr)[2*ind] = a;
+        reinterpret_cast<double*>(_complexarr)[2*ind + 1] = b;
+    }
     for(size_t ind = 0; ind < _size; ++ind) _sh[ind] = _sig[ind] * _shift;
-    
+
     return specout;
 }
 
