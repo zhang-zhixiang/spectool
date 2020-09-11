@@ -1,33 +1,59 @@
 #include <cmath>
 #include <tuple>
 #include <vector>
+#include <iostream>
 #include <algorithm>
 #include <type_traits>
 #include <complex>
 #include <fftw3.h>
+// #include "pybind11/pybind11.h"
+#include "pybind11/stl.h"
+
+namespace py = pybind11;
 
 typedef std::vector<double> VEC;
 typedef const std::vector<double> CVEC;
 
 class Shift_spec {
     // The code refer the example code in blog https://www.cnblogs.com/aiguona/p/9407425.html
+private:
+    Shift_spec(const Shift_spec&);
+    Shift_spec& operator=(const Shift_spec&); //prevent copy
     std::complex<double> * _in, * _out;
+    std::complex<double> * _fourtr;
     fftw_plan _p;
+    fftw_plan _ifft;
     size_t _size;
     double * _sig;
-    double * _sh;
     std::complex<double> * _complexarr;
     double _shift;
     void ini_par(int size);
     void destroy_par();
 public:
     double * specout;
-    double get_shift_value();
+
+    // Shift_spec();
     Shift_spec(CVEC & spec);
     bool set_spec(CVEC & spec);
-    double * shift_spec(double shift);
+    double get_shift_value();
+    double * get_shift_spec(double shift);
+    VEC get_shift_spec_arr(double shift);
     ~Shift_spec();
 };
+
+// Shift_spec::Shift_spec():
+//     _in(nullptr), _out(nullptr), _p(nullptr),
+//     _size(0), _sig(nullptr),
+//     _complexarr(nullptr), _shift(0){}
+
+Shift_spec::Shift_spec(CVEC & spec):
+    _in(nullptr), _out(nullptr), _p(nullptr),
+    _size(0), _sig(nullptr),
+    _complexarr(nullptr), _shift(0){
+        // int a = 23;
+    // Shift_spec();
+    set_spec(spec);
+}
 
 void Shift_spec::destroy_par(){
     if (_in != nullptr){
@@ -37,17 +63,19 @@ void Shift_spec::destroy_par(){
         delete [] _in;
         delete [] _out;
         delete [] _sig;
-        delete [] _sh;
         delete [] _complexarr;
         delete [] specout;
         _p = nullptr;
         _in = nullptr;
         _out = nullptr;
         _sig = nullptr;
-        _sh = nullptr;
         specout = nullptr;
         _size = 0;
     }
+}
+
+Shift_spec::~Shift_spec(){
+    destroy_par();
 }
 
 void Shift_spec::ini_par(int size){
@@ -57,12 +85,16 @@ void Shift_spec::ini_par(int size){
     // _out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * size);
     _in = new std::complex<double>[_size];
     _out = new std::complex<double>[_size];
+    _fourtr = new std::complex<double>[_size];
+    _ifft = fftw_plan_dft_1d(_size,
+                             reinterpret_cast<fftw_complex*>(_in),
+                             reinterpret_cast<fftw_complex*>(_fourtr),
+                             FFTW_BACKWARD, FFTW_ESTIMATE);
     _p = fftw_plan_dft_1d(_size,
-                          reinterpret_cast<fftw_complex*>(_in),
+                          reinterpret_cast<fftw_complex*>(_fourtr),
                           reinterpret_cast<fftw_complex*>(_out),
                           FFTW_FORWARD, FFTW_ESTIMATE);
     _sig = new double[_size];
-    _sh = new double[_size];
     _complexarr = new std::complex<double>[_size];
     specout = new double[_size];
 
@@ -75,22 +107,58 @@ void Shift_spec::ini_par(int size){
 }
 
 bool Shift_spec::set_spec(CVEC & spec){
-    if (_in != nullptr && _size != spec.size())
+    if (_in == nullptr || _size != spec.size())
         ini_par(spec.size());
+    for(size_t ind = 0; ind < _size; ++ind){
+        reinterpret_cast<double*>(_in)[2*ind] = spec[ind];
+        reinterpret_cast<double*>(_in)[2*ind+1] = 0;
+    }
+    std::cout << "_in =" << std::endl;
+    for(size_t ind = 0; ind < _size; ++ind)
+        std::cout << _in[ind] << "  ";
+    std::cout << std::endl;
     return true;
 }
 
-double * Shift_spec::shift_spec(double shift){
+double * Shift_spec::get_shift_spec(double shift){
     _shift = shift;
+    std::cout << "_size = " << _size << std::endl;
+    // for (auto var : _in)
+    //     std::cout << var << "  ";
+    // std::cout << std::endl;
+    fftw_execute(_ifft);
+    std::cout << "_fourtr =" << std::endl;
+    for(size_t ind = 0; ind < _size; ++ind)
+        std::cout << _fourtr[ind] << "  ";
+    std::cout << "after run fftw_execute" << std::endl;
+    std::cout << "sincos =" << std::endl;
     for (size_t ind = 0; ind < _size; ++ind){
         auto a = cos(_sig[ind]*shift);
         auto b = sin(_sig[ind]*shift);
-        reinterpret_cast<double*>(_complexarr)[2*ind] = a;
-        reinterpret_cast<double*>(_complexarr)[2*ind + 1] = b;
+        std::complex<double> complexshift = {a, b};
+        std::cout << complexshift << "  ";
+        _fourtr[ind] = _fourtr[ind] * complexshift;
+        // reinterpret_cast<double*>(_complexarr)[2*ind] = a;
+        // reinterpret_cast<double*>(_complexarr)[2*ind + 1] = b;
     }
-    for(size_t ind = 0; ind < _size; ++ind) _sh[ind] = _sig[ind] * _shift;
-
+    std::cout << std::endl;
+    std::cout << "_fourtr =" << std::endl;
+    for(size_t ind = 0; ind < _size; ++ind)
+        std::cout << _fourtr[ind] << "  ";
+    std::cout << std::endl;
+    fftw_execute(_p);
+    for(size_t ind = 0; ind < _size; ++ind)
+        specout[ind] = std::abs(_out[ind]) / _size;
     return specout;
+}
+
+VEC Shift_spec::get_shift_spec_arr(double shift){
+    std::cout << "run get_shift_spec_arr" << std::endl;
+    get_shift_spec(shift);
+    VEC out(_size);
+    for(size_t ind = 0; ind < _size; ++ind)
+        out[ind] = specout[ind];
+    return out;
 }
 
 template < typename Iter, typename Iterb>
@@ -163,4 +231,15 @@ auto get_shift(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge
     auto finalshift = shiftlst2[indminmax];
     auto rmax = rlst2[indminmax];
     return std::make_tuple(finalshift, rmax);
+}
+
+
+PYBIND11_MODULE(liblogccf, m) {
+    m.doc() = "Simple test";
+
+    py::class_<Shift_spec>(m, "Shift_spec")
+        .def(py::init<CVEC>())
+        .def("get_shift_spec_arr", &Shift_spec::get_shift_spec_arr);
+
+    // m.def("get_shift", &get_shift, "run FR/RSS to estimate the error bar");
 }
