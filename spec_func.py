@@ -24,12 +24,12 @@ def air2vac(wave):
     return (1+coef) * wave
 
 
-def median_reject_cos(flux, size=20):
+def median_reject_cos(flux, size=21):
     """reject the cosmic ray using the median filter
 
     Args:
         flux (numpy.ndarray): spectral flux
-        size (int, optional): median filter size. Defaults to 20.
+        size (int, optional): median filter size. Defaults to 21.
 
     Returns:
         new_flux(numpy.ndarray): the spectral flux after removing the cosmic ray

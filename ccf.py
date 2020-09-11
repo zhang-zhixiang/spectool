@@ -1,9 +1,11 @@
 import math
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from . import libccf
 from . import spec_func
 from . import rebin
+from . import liblogccf
 
 
 def shiftspec(flux, shift):
@@ -120,6 +122,57 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     velocity = measure_shift * log_delta_w * c
     if plot is True:
         ax.plot(shiftlst, ccf_valuelst)
+        plt.show()
+    return -velocity
+
+
+def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0):
+    """find the radial velocity using ccf method
+
+    Args:
+        wave (numpy.ndarray): spectral wave
+        flux (numpy.ndarray): spectral flux
+        wave_ref (numpy.ndarray): the spectral wave of template
+        flux_ref (numpy.ndarray): the spectral flux of template
+        mult (bool, optional): use multiplication to cal the ccf value, else use diff. Defaults to True.
+        plot (bool, optional): whether plot the ccf profile. Defaults to False.
+        ccfleft (int, optional): the left edge of ccf funtion, in the unit of km/s. Defaults to -800.
+        ccfright (int, optional): the right edge of ccf function, in the unit of km/s. Defaults to 800.
+        velocity_resolution (float, optional): the velocity resolution of ccf, in the unit of km/s. Defaults to 1.0.
+
+    Returns:
+        velocity(float, km/s): the velocity of the spectrum compared with the template. Here positive value means red shift,
+        negative value means blue shift.
+    """
+    c = 299792.458 # km/s
+    logwave = np.log(wave)
+    logwave_ref = np.log(wave_ref)
+    log_delta_w = np.min(np.diff(logwave))
+    logwbegin = min(logwave[0], logwave_ref[0])
+    logwend = max(logwave[-1], logwave_ref[-1])
+    lognewave = np.arange(logwbegin, logwend, log_delta_w)
+    newave = np.exp(lognewave)
+    newflux = np.array(rebin.rebin(wave, flux, newave))
+    newflux_ref = np.array(rebin.rebin(wave_ref, flux_ref, newave))
+    cont = spec_func.continuum(newave, newflux)
+    cont_ref = spec_func.continuum(newave, newflux_ref)
+    norm_cont = (cont - np.mean(cont)) / np.std(cont)
+    norm_cont_ref = (cont_ref - np.mean(cont_ref)) / np.std(cont_ref)
+
+    shiftleft = int(math.floor(ccfleft / c / log_delta_w))
+    shiftright = int(math.ceil(ccfright / c / log_delta_w))
+    delta_shift = velocity_resolution / c / log_delta_w
+    start = time.time()
+    shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
+    end = time.time()
+    print('time spend = ', end - start)
+    if plot is True:
+        arg = np.argsort(shiftlst)
+        shiftlst = np.array(shiftlst)[arg]
+        rlst = np.array(rlst)[arg]
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(shiftlst, rlst)
         plt.show()
     return -velocity
 
