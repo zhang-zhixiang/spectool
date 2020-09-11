@@ -149,20 +149,19 @@ auto get_ccf_value(Iter begin, Iter end, Iterb begin_ref, bool mult=true){
     return out;
 }
 
-auto get_shift(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge, double resolution, bool mult=true){
+auto get_ccf(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge, double resolution, bool mult=true){
     // return shift_peak, rmax
     int lefte = int(std::floor(left_edge));
     int righte = int(std::ceil(right_edge));
     int range = std::max(std::abs(lefte), std::abs(righte));
     int lenshift = righte - lefte + 1;
-    std::vector<int> shiftlst(lenshift);
-    for(int ind = 0; ind < lenshift; ++ind) shiftlst[ind] = lefte + ind;
-    std::vector<double> rlst;
+    VEC outshift, rlst;
     for (int shift = lefte; shift <= righte; ++shift){
         auto sfrom = spec.begin() + range;
         auto send = spec.end() - range;
         auto tfrom = spec_ref.begin() + range + shift;
         auto r = get_ccf_value(sfrom, send, tfrom, mult);
+        outshift.push_back(double(shift));
         rlst.push_back(r);
     }
     int indminmax = 0;
@@ -175,30 +174,34 @@ auto get_shift(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge
     }
     int aprox_shift = lefte + indminmax;
     if (resolution > 1)
-        return std::make_tuple(double(aprox_shift), rlst[indminmax]);
-    VEC rlst2, shiftlst2;
+        return std::make_tuple(outshift, rlst);
     Shift_spec shiftmodel(spec_ref);
+    auto sfrom = spec.begin() + range;
+    auto send = spec.end() - range;
+    auto tbegin = shiftmodel.specout + range;
     for(double shift = aprox_shift-1; shift < aprox_shift+1; shift+=resolution){
-        shiftlst2.push_back(shift);
         shiftmodel.get_shift_spec(shift);
-        auto sfrom = spec.begin() + range;
-        auto send = spec.end() - range;
-        auto tbegin = shiftmodel.specout + range;
         auto r = get_ccf_value(sfrom, send, tbegin, mult);
-        rlst2.push_back(r);
+        outshift.push_back(shift);
+        rlst.push_back(r);
     }
-    if (mult == true){
-        auto itrmax = std::max_element(rlst2.begin(), rlst2.end());
-        indminmax = std::distance(rlst2.begin(), itrmax);
-    } else {
-        auto itrmin = std::min_element(rlst2.begin(), rlst2.end());
-        indminmax = std::distance(rlst2.begin(), itrmin);
-    }
-    auto finalshift = shiftlst2[indminmax];
-    auto rmax = rlst2[indminmax];
-    return std::make_tuple(finalshift, rmax);
+    return std::make_tuple(outshift, rlst);
 }
 
+auto get_shift(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge, double resolution, bool mult=true){
+    auto [vecshift, vecr] = get_ccf(spec, spec_ref, left_edge, right_edge, resolution, mult);
+    int indminmax = 0;
+    if (mult == true){
+        auto itrmax = std::max_element(vecr.begin(), vecr.end());
+        indminmax = std::distance(vecr.begin(), itrmax);
+    } else {
+        auto itrmin = std::min_element(vecr.begin(), vecr.end());
+        indminmax = std::distance(vecr.begin(), itrmin);
+    }
+    double shift = vecshift[indminmax];
+    double rmax = vecr[indminmax];
+    return std::make_tuple(shift, rmax);
+}
 
 PYBIND11_MODULE(liblogccf, m) {
     m.doc() = "Simple test";
@@ -207,5 +210,6 @@ PYBIND11_MODULE(liblogccf, m) {
         .def(py::init<CVEC>())
         .def("get_shift_spec_arr", &Shift_spec::get_shift_spec_arr);
 
-    m.def("get_shift", &get_shift, "run FR/RSS to estimate the error bar");
+    m.def("get_shift", &get_shift, "get the shift of spec compared with spec_ref");
+    m.def("get_ccf", &get_ccf, "get the ccf function array of spec compared with spec_ref");
 }
