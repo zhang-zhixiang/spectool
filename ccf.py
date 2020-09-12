@@ -162,14 +162,18 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     shiftleft = int(math.floor(ccfleft / c / log_delta_w))
     shiftright = int(math.ceil(ccfright / c / log_delta_w))
     delta_shift = velocity_resolution / c / log_delta_w
-    start = time.time()
     shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
+    shiftlst = np.array(shiftlst)
+    rlst = np.array(rlst)
+    start = time.time()
+    shift, rmax = liblogccf.get_shift(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
     end = time.time()
+    velocity = shift * log_delta_w * c
     print('time spend = ', end - start)
     if plot is True:
         arg = np.argsort(shiftlst)
-        shiftlst = np.array(shiftlst)[arg]
-        rlst = np.array(rlst)[arg]
+        shiftlst = shiftlst[arg]
+        rlst = rlst[arg]
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.plot(shiftlst, rlst)

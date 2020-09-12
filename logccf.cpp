@@ -146,19 +146,21 @@ auto get_ccf_value(Iter begin, Iter end, Iterb begin_ref, bool mult=true){
             out += dif*dif;
         }
     }
-    return out;
+    auto length = end - begin;
+    return out / length;
 }
 
-auto get_ccf(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge, double resolution, bool mult=true){
+auto get_ccf(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge, double resolution, const bool mult=true){
     // return shift_peak, rmax
     int lefte = int(std::floor(left_edge));
     int righte = int(std::ceil(right_edge));
     int range = std::max(std::abs(lefte), std::abs(righte));
     int lenshift = righte - lefte + 1;
     VEC outshift, rlst;
+    const auto sfrom = spec.begin() + range;
+    const auto send = spec.end() - range;
+
     for (int shift = lefte; shift <= righte; ++shift){
-        auto sfrom = spec.begin() + range;
-        auto send = spec.end() - range;
         auto tfrom = spec_ref.begin() + range + shift;
         auto r = get_ccf_value(sfrom, send, tfrom, mult);
         outshift.push_back(double(shift));
@@ -172,15 +174,25 @@ auto get_ccf(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge, 
         auto itrmin = std::min_element(rlst.begin(), rlst.end());
         indminmax = std::distance(rlst.begin(), itrmin);
     }
-    int aprox_shift = lefte + indminmax;
+    double aprox_shift = outshift[indminmax];
+    std::cout << "aprox shift = " << aprox_shift << std::endl;
+    std::cout << "resolution = " << resolution << std::endl;
+    std::cout << "range = " << range << std::endl;
+    auto tmptfrom = spec_ref.begin() + range + int(aprox_shift);
+    for (size_t ind = 0; ind < 10; ++ind)
+        std::cout << *(tmptfrom + ind) << "  ";
+    std::cout << std::endl;
     if (resolution > 1)
         return std::make_tuple(outshift, rlst);
+
     Shift_spec shiftmodel(spec_ref);
-    auto sfrom = spec.begin() + range;
-    auto send = spec.end() - range;
-    auto tbegin = shiftmodel.specout + range;
-    for(double shift = aprox_shift-1; shift < aprox_shift+1; shift+=resolution){
+    const auto tbegin = shiftmodel.specout + range;
+    // for(double shift = aprox_shift-30; shift <= aprox_shift+30; shift+=resolution){
+    for(double shift = aprox_shift; shift <= aprox_shift; shift+=resolution){
         shiftmodel.get_shift_spec(shift);
+        for(size_t ind = 0; ind < 10; ++ind)
+            std::cout << *(tbegin + ind) << "  ";
+        std::cout << std::endl;
         auto r = get_ccf_value(sfrom, send, tbegin, mult);
         outshift.push_back(shift);
         rlst.push_back(r);

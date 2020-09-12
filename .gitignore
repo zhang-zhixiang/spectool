@@ -1,6 +1,7 @@
 *.so
 *.o
 *.dylib
+*.pyc
 .vscode/
 __pycache__/
 stellar/__pycache__/
