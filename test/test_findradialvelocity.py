@@ -55,6 +55,16 @@ def main():
     print('find_radial_velocity_mc run time =', t2 - t1)
     print(velocitylst)
     print(rmaxlst)
+    plt.hist(velocitylst, bins=10)
+    plt.figure()
+    shift_med = np.median(velocitylst)
+    print('median velocity =', shift_med)
+    cont_temp = spectool.spec_func.continuum(wave2, flux2)
+    cont_stelar = spectool.spec_func.continuum(wave1, flux1)
+    wave_stelar = spectool.spec_func.shift_wave(wave1, -shift_med)
+    plt.plot(wave_stelar, cont_stelar)
+    plt.plot(wave2, cont_temp)
+    plt.show()
 
 
 if __name__ == '__main__':
