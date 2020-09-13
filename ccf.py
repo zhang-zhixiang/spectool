@@ -72,6 +72,7 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     # here the code is modified to first and second loops, in order to save the computation
     shiftleft = int(math.floor(ccfleft / c / log_delta_w))
     shiftright = int(math.ceil(ccfright / c / log_delta_w))
+    t1 = time.time()
     shiftlst = np.arange(shiftleft, shiftright+1)
     select_range = max(abs(shiftlst[0]), abs(shiftlst[-1]))
     ccf_valuelst = []
@@ -119,6 +120,8 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     else:
         index = np.argmin(ccf_valuelst)
     measure_shift = shiftlst[index]
+    t2 = time.time()
+    print('ccf time =', t2 - t1)
     velocity = measure_shift * log_delta_w * c
     if plot is True:
         ax.plot(shiftlst, ccf_valuelst)
@@ -154,8 +157,8 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     newave = np.exp(lognewave)
     newflux = np.array(rebin.rebin(wave, flux, newave))
     newflux_ref = np.array(rebin.rebin(wave_ref, flux_ref, newave))
-    cont = spec_func.continuum(newave, newflux)
-    cont_ref = spec_func.continuum(newave, newflux_ref)
+    cont = spec_func.continuum(newave, newflux, maxiterations=1)
+    cont_ref = spec_func.continuum(newave, newflux_ref, maxiterations=1)
     norm_cont = (cont - np.mean(cont)) / np.std(cont)
     norm_cont_ref = (cont_ref - np.mean(cont_ref)) / np.std(cont_ref)
     shiftleft = int(math.floor(ccfleft / c / log_delta_w))

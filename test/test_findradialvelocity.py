@@ -1,3 +1,4 @@
+import time
 import spectool
 from spectool import ccf
 import numpy as np
@@ -37,7 +38,14 @@ def main():
     # print(flux3[:10])
     plt.plot(wave2, flux3)
     plt.show()
-    result = ccf.find_radial_velocity2(wave1, flux1, wave2, flux2, mult=True, plot=True, ccfleft=-800, ccfright=800, velocity_resolution=1.0)
+    t1 = time.time()
+    result = ccf.find_radial_velocity2(wave1, flux1, wave2, flux2, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0)
+    t2 = time.time()
+    print('find_radial_velocity2 run time =', t2 - t1)
+    t1 = time.time()
+    result = ccf.find_radial_velocity(wave1, flux1, wave2, flux2, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0)
+    t2 = time.time()
+    print('find_radial_velocity run time =', t2 - t1)
     print(result)
 
 
