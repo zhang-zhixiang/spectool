@@ -77,7 +77,7 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     ccf_valuelst = []
     count_pixels = norm_cont[select_range:-select_range].size
     for shift in shiftlst:
-        norm_cont_shift = shiftspec(norm_cont, shift)
+        norm_cont_shift = shiftspec(norm_cont, -shift)
         if mult is True:
             mul_val = norm_cont_shift[select_range:-select_range] * norm_cont_ref[select_range:-select_range]
             ccf_val = np.abs(np.sum(mul_val)) / count_pixels
@@ -100,12 +100,12 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     if delta_shift > 1:
         if plot is True:
             plt.show()
-        return -measure_shift * log_delta_w * c
+        return measure_shift * log_delta_w * c
 
     shiftlst = np.arange(measure_shift-1, measure_shift+1, delta_shift)
     ccf_valuelst = []
     for shift in shiftlst:
-        norm_cont_shift = shiftspec(norm_cont, shift)
+        norm_cont_shift = shiftspec(norm_cont, -shift)
         if mult is True:
             mul_val = norm_cont_shift[select_range:-select_range] * norm_cont_ref[select_range:-select_range]
             ccf_val = np.abs(np.sum(mul_val)) / count_pixels
@@ -123,7 +123,7 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     if plot is True:
         ax.plot(shiftlst, ccf_valuelst)
         plt.show()
-    return -velocity
+    return velocity
 
 
 def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0):
@@ -158,10 +158,6 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     cont_ref = spec_func.continuum(newave, newflux_ref)
     norm_cont = (cont - np.mean(cont)) / np.std(cont)
     norm_cont_ref = (cont_ref - np.mean(cont_ref)) / np.std(cont_ref)
-
-    # norm_cont = (cont) / np.std(cont)
-    # norm_cont_ref = cont_ref / np.std(cont_ref)
-
     shiftleft = int(math.floor(ccfleft / c / log_delta_w))
     shiftright = int(math.ceil(ccfright / c / log_delta_w))
     delta_shift = velocity_resolution / c / log_delta_w
@@ -181,7 +177,7 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
         ax = fig.add_subplot(111)
         ax.plot(shiftlst, rlst)
         plt.show()
-    return -velocity
+    return velocity
 
 
 def iccf_spec(wave, flux, wave_ref, flux_ref, shiftlst, mask=None):
