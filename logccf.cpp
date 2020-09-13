@@ -1,5 +1,6 @@
 #include <cmath>
 #include <tuple>
+#include <random>
 #include <vector>
 #include <iostream>
 #include <algorithm>
@@ -31,8 +32,19 @@ private:
 public:
     double * specout;
 
+    Shift_spec(int size);
     Shift_spec(CVEC & spec);
     bool set_spec(CVEC & spec);
+    template <typename Iter> bool set_spec(Iter begin, int size){
+        if (_in == nullptr || _size != size)
+            ini_par(size);
+        for(size_t ind = 0; ind < _size; ++ind){
+            reinterpret_cast<double*>(_in)[2*ind] = *(begin+ind);
+            reinterpret_cast<double*>(_in)[2*ind+1] = 0;
+        }
+        fftw_execute(_ifft);
+        return true;
+    }
     double get_shift_value();
     double * get_shift_spec(const double shift);
     VEC get_shift_spec_arr(double shift);
@@ -45,6 +57,14 @@ Shift_spec::Shift_spec(CVEC & spec):
     _p(nullptr), _ifft(nullptr),
     _size(0), _sig(nullptr), _shift(0){
     set_spec(spec);
+}
+
+Shift_spec::Shift_spec(int size):
+    _in(nullptr), _out(nullptr), _fourtr(nullptr),
+    _four_with_shift(nullptr), 
+    _p(nullptr), _ifft(nullptr),
+    _size(0), _sig(nullptr), _shift(0){
+        ini_par(size);
 }
 
 void Shift_spec::destroy_par(){
@@ -208,6 +228,65 @@ auto get_shift(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge
     return std::make_tuple(shift, rmax);
 }
 
+std::random_device r;
+std::default_random_engine e1(r());
+
+auto get_shift_mc(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge, double resolution, int mcnumber, double inc_ration, bool mult=true){
+    int ccfsize = int(spec.size() * inc_ration);
+    int start_window = spec.size() - ccfsize - 1;
+    std::uniform_int_distribution<int> uniform_dist(0, start_window);
+    Shift_spec shiftmodel(ccfsize);
+    const int lefte = int(std::floor(left_edge));
+    const int righte = int(std::ceil(right_edge));
+    const int range = std::max(std::abs(lefte), std::abs(righte));
+    VEC outbestshiftlst, outrmaxlst;
+    for (size_t loop = 0; loop < mcnumber; ++loop){
+        int from = uniform_dist(e1);
+        VEC outshift, rlst;
+        const auto sfrom = spec.begin() + range + from;
+        const auto send = spec.begin() + range + from + ccfsize;
+
+        for (int shift = lefte; shift <= righte; ++shift){
+            auto tfrom = spec_ref.begin() + range + from - shift;
+            auto r = get_ccf_value(sfrom, send, tfrom, mult);
+            outshift.push_back(double(shift));
+            rlst.push_back(r);
+        }
+        int indminmax = 0;
+        if (mult == true){
+            auto itrmax = std::max_element(rlst.begin(), rlst.end());
+            indminmax = std::distance(rlst.begin(), itrmax);
+        } else {
+            auto itrmin = std::min_element(rlst.begin(), rlst.end());
+            indminmax = std::distance(rlst.begin(), itrmin);
+        }
+        double aprox_shift = outshift[indminmax];
+
+        if (resolution < 1)
+            shiftmodel.set_spec(spec_ref.begin() + from, ccfsize);
+            const auto tbegin = shiftmodel.specout + range;
+            for(double shift = aprox_shift-1; shift <= aprox_shift+1; shift+=resolution){
+                shiftmodel.get_shift_spec(shift);
+                auto r = get_ccf_value(sfrom, send, tbegin, mult);
+                outshift.push_back(shift);
+                rlst.push_back(r);
+        }
+
+        if (mult == true){
+            auto itrmax = std::max_element(rlst.begin(), rlst.end());
+            indminmax = std::distance(rlst.begin(), itrmax);
+        } else {
+            auto itrmin = std::min_element(rlst.begin(), rlst.end());
+            indminmax = std::distance(rlst.begin(), itrmin);
+        }
+        double shift = outshift[indminmax];
+        double rmax = rlst[indminmax];
+        outbestshiftlst.push_back(shift);
+        outrmaxlst.push_back(rmax);
+    }
+    return make_tuple(outbestshiftlst, outrmaxlst);
+}
+
 PYBIND11_MODULE(liblogccf, m) {
     m.doc() = "Simple test";
 
@@ -216,5 +295,6 @@ PYBIND11_MODULE(liblogccf, m) {
         .def("get_shift_spec_arr", &Shift_spec::get_shift_spec_arr);
 
     m.def("get_shift", &get_shift, "get the shift of spec compared with spec_ref");
+    m.def("get_shift_mc", &get_shift_mc, "get the shift lst of spec compared with spec_ref");
     m.def("get_ccf", &get_ccf, "get the ccf function array of spec compared with spec_ref");
 }
