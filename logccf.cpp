@@ -34,7 +34,7 @@ public:
     Shift_spec(CVEC & spec);
     bool set_spec(CVEC & spec);
     double get_shift_value();
-    double * get_shift_spec(double shift);
+    double * get_shift_spec(const double shift);
     VEC get_shift_spec_arr(double shift);
     ~Shift_spec();
 };
@@ -112,7 +112,7 @@ bool Shift_spec::set_spec(CVEC & spec){
     return true;
 }
 
-double * Shift_spec::get_shift_spec(double shift){
+double * Shift_spec::get_shift_spec(const double shift){
     _shift = shift;
     for (size_t ind = 0; ind < _size; ++ind){
         auto a = cos(_sig[ind]*shift);
@@ -137,6 +137,10 @@ VEC Shift_spec::get_shift_spec_arr(double shift){
 template < typename Iter, typename Iterb>
 auto get_ccf_value(Iter begin, Iter end, Iterb begin_ref, bool mult=true){
     typename std::iterator_traits<Iter>::value_type out = 0;
+    std::cout << std::endl;
+    for(size_t ind = 0; ind < 50; ++ind)
+        std::cout << *(begin_ref+ind) << "  ";
+    std::cout << std::endl;
     if(mult == true){
         for(size_t ind = 0; begin+ind != end; ++ind)
             out += *(begin+ind) * (*(begin_ref+ind));
@@ -161,7 +165,7 @@ auto get_ccf(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge, 
     const auto send = spec.end() - range;
 
     for (int shift = lefte; shift <= righte; ++shift){
-        auto tfrom = spec_ref.begin() + range + shift;
+        auto tfrom = spec_ref.begin() + range - shift;
         auto r = get_ccf_value(sfrom, send, tfrom, mult);
         outshift.push_back(double(shift));
         rlst.push_back(r);
@@ -184,20 +188,22 @@ auto get_ccf(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge, 
 
     Shift_spec shiftmodel(spec_ref);
     const auto tbegin = shiftmodel.specout + range;
-    for(double shift = aprox_shift-1; shift <= aprox_shift+1; shift+=resolution){
+    // for(double shift = aprox_shift-1; shift <= aprox_shift+1; shift+=resolution){
+    // for(double shift = 0; shift <= 0; shift+=resolution){
+    for(double shift = -100; shift < 100; shift += 1){
         shiftmodel.get_shift_spec(shift);
-        std::cout << "shift = " << shift << std::endl;
         std::cout << "compare" << std::endl;
-        auto tfrom = spec_ref.begin() + range;
-        for(size_t ind = 0; ind < 10+range; ++ind)
-            std::cout << *(shiftmodel.specout+ind) << "  ";
+        std::cout << "shift = " << shift << std::endl;
+        // auto tfrom = spec_ref.begin() + range;
+        // for(size_t ind = 0; ind < 10+range; ++ind)
+        //     std::cout << *(shiftmodel.specout+ind) << "  ";
             // std::cout << *(tfrom +  ind) << "  ";
-        std::cout << std::endl;
-        for(size_t ind = 0; ind < 10+range; ++ind)
-            std::cout << *(spec_ref.begin() + ind) << "  ";
+        // std::cout << std::endl;
+        // for(size_t ind = 0; ind < 10+range; ++ind)
+        //     std::cout << *(spec_ref.begin() + ind) << "  ";
             // std::cout << *(tbegin + ind) << "  ";
         std::cout << std::endl;
-        auto r = get_ccf_value(sfrom, send, tbegin, mult);
+        auto r = get_ccf_value(sfrom, send, shiftmodel.specout+range, mult);
         outshift.push_back(shift);
         rlst.push_back(r);
     }

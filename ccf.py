@@ -159,6 +159,9 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     norm_cont = (cont - np.mean(cont)) / np.std(cont)
     norm_cont_ref = (cont_ref - np.mean(cont_ref)) / np.std(cont_ref)
 
+    # norm_cont = (cont) / np.std(cont)
+    # norm_cont_ref = cont_ref / np.std(cont_ref)
+
     shiftleft = int(math.floor(ccfleft / c / log_delta_w))
     shiftright = int(math.ceil(ccfright / c / log_delta_w))
     delta_shift = velocity_resolution / c / log_delta_w

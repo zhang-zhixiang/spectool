@@ -25,12 +25,16 @@ def main():
     wave2, flux2, err2 = read_spec(fname2)
     med = np.median(flux2)
     flux2 = flux2 / med
+    # flux2 = flux2 - np.mean(flux2)
     # plt.plot(wave1, flux1)
     plt.plot(wave2, flux2)
     Shiftmodel = ccf.liblogccf.Shift_spec(flux2)
-    flux3 = Shiftmodel.get_shift_spec_arr(1.0)
-    print(flux2[:10])
-    print(flux3[:10])
+    # for shift in range(-51, -49, 0.37):
+    # for shift in np.arange(-51, -49, 0.37):
+    shift = -51
+    flux3 = np.array(Shiftmodel.get_shift_spec_arr(shift))
+    # print(flux2[50:60] - flux3[0:10])
+    # print(flux3[:10])
     plt.plot(wave2, flux3)
     plt.show()
     result = ccf.find_radial_velocity2(wave1, flux1, wave2, flux2, mult=True, plot=True, ccfleft=-800, ccfright=800, velocity_resolution=1.0)
