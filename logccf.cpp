@@ -48,7 +48,7 @@ public:
     }
     double get_shift_value();
     double * get_shift_spec(const double shift);
-    VEC get_shift_spec_arr(double shift);
+    py::array_t<double> get_shift_spec_arr(double shift);
     ~Shift_spec();
 };
 
@@ -147,12 +147,9 @@ double * Shift_spec::get_shift_spec(const double shift){
     return specout;
 }
 
-VEC Shift_spec::get_shift_spec_arr(double shift){
+py::array_t<double> Shift_spec::get_shift_spec_arr(double shift){
     get_shift_spec(shift);
-    VEC out(_size);
-    for(size_t ind = 0; ind < _size; ++ind)
-        out[ind] = specout[ind];
-    return out;
+    return VEC2numpyarr(specout, specout + _size);
 }
 
 template < typename Iter, typename Iterb>
