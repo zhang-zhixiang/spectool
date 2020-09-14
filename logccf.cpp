@@ -9,6 +9,7 @@
 #include <fftw3.h>
 // #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
+#include "types.h"
 
 namespace py = pybind11;
 
@@ -287,6 +288,24 @@ auto get_shift_mc(CVEC & spec, CVEC & spec_ref, double left_edge, double right_e
     return make_tuple(outbestshiftlst, outrmaxlst);
 }
 
+auto numpy_get_shift_mc(CVEC & spec, CVEC & spec_ref, 
+        double left_edge, double right_edge, double resolution, 
+        int mcnumber, double inc_ration, bool mult=true){
+    auto [shift, rmax] = get_shift_mc(spec, spec_ref, left_edge, right_edge, resolution, mcnumber, inc_ration, mult);
+    auto newshift = VEC2numpyarr(shift);
+    auto newrmax = VEC2numpyarr(rmax);
+    return std::make_tuple(newshift, newrmax);
+}
+
+auto numpy_get_ccf(CVEC & spec, CVEC & spec_ref, 
+        double left_edge, double right_edge, 
+        double resolution, const bool mult=true){
+    auto [shift, rlst] = get_ccf(spec, spec_ref, left_edge, right_edge, resolution, mult);
+    auto newshift = VEC2numpyarr(shift);
+    auto newrlst = VEC2numpyarr(rlst);
+    return std::make_tuple(newshift, newrlst);
+}
+
 PYBIND11_MODULE(liblogccf, m) {
     m.doc() = "Simple test";
 
@@ -295,6 +314,6 @@ PYBIND11_MODULE(liblogccf, m) {
         .def("get_shift_spec_arr", &Shift_spec::get_shift_spec_arr);
 
     m.def("get_shift", &get_shift, "get the shift of spec compared with spec_ref");
-    m.def("get_shift_mc", &get_shift_mc, "get the shift lst of spec compared with spec_ref");
-    m.def("get_ccf", &get_ccf, "get the ccf function array of spec compared with spec_ref");
+    m.def("get_shift_mc", &numpy_get_shift_mc, "get the shift lst of spec compared with spec_ref");
+    m.def("get_ccf", &numpy_get_ccf, "get the ccf function array of spec compared with spec_ref");
 }

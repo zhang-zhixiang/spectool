@@ -51,7 +51,7 @@ def main():
     print(result)
 
     t1 = time.time()
-    velocitylst, rmaxlst = ccf.find_radial_velocity_mc(wave1, flux1, wave2, flux2, mult=True, plot=False, ccfleft=-800, ccfright=800, mcnumber=5000, incratio=0.5)
+    velocitylst, rmaxlst = ccf.find_radial_velocity_mc(wave1, flux1, wave2, flux2, mult=True, plot=False, ccfleft=-800, ccfright=800, mcnumber=100, incratio=0.25)
     t2 = time.time()
     print('find_radial_velocity_mc run time =', t2 - t1)
     print(velocitylst)
