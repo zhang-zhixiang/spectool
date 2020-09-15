@@ -1,5 +1,4 @@
 import math
-import time
 import numpy as np
 import matplotlib.pyplot as plt
 from . import libccf
@@ -72,7 +71,6 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     # here the code is modified to first and second loops, in order to save the computation
     shiftleft = int(math.floor(ccfleft / c / log_delta_w))
     shiftright = int(math.ceil(ccfright / c / log_delta_w))
-    t1 = time.time()
     shiftlst = np.arange(shiftleft, shiftright+1)
     select_range = max(abs(shiftlst[0]), abs(shiftlst[-1]))
     ccf_valuelst = []
@@ -120,8 +118,6 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     else:
         index = np.argmin(ccf_valuelst)
     measure_shift = shiftlst[index]
-    t2 = time.time()
-    print('ccf time =', t2 - t1)
     velocity = measure_shift * log_delta_w * c
     if plot is True:
         ax.plot(shiftlst, ccf_valuelst)
@@ -167,11 +163,8 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
     shiftlst = np.array(shiftlst)
     rlst = np.array(rlst)
-    start = time.time()
     shift, rmax = liblogccf.get_shift(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
-    end = time.time()
     velocity = shift * log_delta_w * c
-    print('time spend = ', end - start)
     if plot is True:
         arg = np.argsort(shiftlst)
         shiftlst = shiftlst[arg]
@@ -218,24 +211,33 @@ def find_radial_velocity_mc(wave, flux, wave_ref, flux_ref, mult=True, plot=Fals
     shiftleft = int(math.floor(ccfleft / c / log_delta_w))
     shiftright = int(math.ceil(ccfright / c / log_delta_w))
     delta_shift = velocity_resolution / c / log_delta_w
-    shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
-    shiftlst = np.array(shiftlst)
-    rlst = np.array(rlst)
-    start = time.time()
+    argc = np.isfinite(norm_cont) == False
+    argt = np.isfinite(norm_cont_ref) == False
+    norm_cont[argc] = 0.0
+    norm_cont_ref[argt] = 0.0
+    if len(norm_cont[argc]) > 0 or len(norm_cont_ref[argt] > 0):
+        print('Caution !!, NaN or inf ocured')
     bestshiftlst, rmaxlst = liblogccf.get_shift_mc(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, mcnumber, incratio, True)
-    end = time.time()
     bestshiftlst = np.array(bestshiftlst)
     rmaxlst = np.array(rmaxlst)
     velocitylst = bestshiftlst * log_delta_w * c
-    print('time spend = ', end - start)
     if plot is True:
+        shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
+        shiftlst = np.array(shiftlst)
+        rlst = np.array(rlst)
+        fig1 = plt.figure()
+        ax1 = fig1.add_subplot(111)
+        ax1.plot(newave, norm_cont)
+        ax1.plot(newave, norm_cont_ref)
         arg = np.argsort(shiftlst)
         shiftlst = shiftlst[arg]
         rlst = rlst[arg]
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.plot(shiftlst, rlst)
-        plt.show()
+        fig1.show()
+        fig.show()
+        # plt.show()
     return velocitylst, rmaxlst
 
 
