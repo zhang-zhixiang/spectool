@@ -5,6 +5,9 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/numpy.h"
 
+typedef std::vector<double> VEC;
+typedef const std::vector<double> CVEC;
+
 namespace py = pybind11;
 
 py::array_t<double> VEC2numpyarr(const std::vector<double> & vec){
