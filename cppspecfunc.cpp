@@ -25,8 +25,23 @@ void Continuum::set_all_iter_zero(){
     contout_itr = nullptr;
 }
 
-void Continuum::ini_gsl (int specsize, int order){
-    // for name in 
+void Continuum::ini_gsl (size_t specsize, size_t order){
+    remove_gsl();
+    work = gsl_multifit_robust_alloc(
+            gsl_multifit_robust_bisquare, specsize, order+1);
+    X = gsl_matrix_alloc(specsize, order+1);
+    cov_par = gsl_matrix_alloc(order+1, order+1);
+    // y = gsl_vector_alloc(specsize);
+    par = gsl_vector_alloc(order+1);
+    specout_itr.reset(new double[specsize]);
+    contout_itr.reset(new double[specsize]);
+}
+
+void Continuum::remove_gsl(){
+    gsl_multifit_robust_free(work);
+    gsl_matrix_free(X);
+    gsl_matrix_free(cov_par);
+    gsl_vector_free(par);
 }
 
 Continuum::Continuum(CVEC & wave, CVEC & flux, int order, int medsize, int max_iter){

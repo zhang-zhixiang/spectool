@@ -21,21 +21,21 @@ class Continuum{
     int _med_size;
     int _max_iter;
     void set_all_iter_zero();
-    void ini_gsl(int specsize, int order);
+    void ini_gsl(size_t specsize, size_t order);
     void remove_gsl();
 
 public:
-    Continuum(CVEC & wave, CVEC & flux, int order, int medsize, int max_iter);
-    Continuum(CVEC & flux, int order, int medsize, int max_iter);
-    Continuum(int fluxsize, int order, int medsize, int max_iter);
+    Continuum(CVEC & wave, CVEC & flux, size_t order, size_t medsize, size_t max_iter);
+    Continuum(CVEC & flux, size_t order, size_t medsize, size_t max_iter);
+    Continuum(int fluxsize, size_t order, size_t medsize, size_t max_iter);
     ~Continuum();
     int size() const;
     bool set_spec(CVEC & wave, CVEC & flux);
     bool set_spec(CVEC & flux);
     bool set_spec(double * spec_begin, double * spec_end);
-    bool set_order(int order);
-    bool set_median_filter_size(int medsize);
-    bool set_max_iteration(int max_iter);
+    bool set_order(size_t order);
+    bool set_median_filter_size(size_t medsize);
+    bool set_max_iteration(size_t max_iter);
     VEC get_continuum();
     VEC get_norm_spec();
     py::array_t<double> get_continuum_arr();
