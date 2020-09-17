@@ -41,7 +41,7 @@ gsl_vector * median_filter(gsl_vector * arr, int medsize){
     return out;
 }
 
-VEC get_normalized_spec(CVEC & wave, CVEC & flux, int medsize, int order){
+VEC get_normalized_spec(CVEC & wave, CVEC & flux, int medsize=35, int order=5){
     VEC norm_wave = normalize_wave(wave);
     gsl_vector * _wave = gsl_vector_alloc(wave.size());
     gsl_vector * _flux = gsl_vector_alloc(flux.size());
