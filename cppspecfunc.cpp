@@ -20,6 +20,7 @@ void Continuum::set_all_iter_zero(){
     cov_par = nullptr;
     x = nullptr;
     y = nullptr;
+    cache = nullptr;
     par = nullptr;
     specout_itr = nullptr;
     contout_itr = nullptr;
@@ -31,35 +32,79 @@ void Continuum::ini_gsl (size_t specsize, size_t order){
             gsl_multifit_robust_bisquare, specsize, order+1);
     X = gsl_matrix_alloc(specsize, order+1);
     cov_par = gsl_matrix_alloc(order+1, order+1);
-    // y = gsl_vector_alloc(specsize);
     par = gsl_vector_alloc(order+1);
+    cache = gsl_vector_alloc(order+1);
     specout_itr.reset(new double[specsize]);
     contout_itr.reset(new double[specsize]);
 }
 
 void Continuum::remove_gsl(){
-    gsl_multifit_robust_free(work);
-    gsl_matrix_free(X);
-    gsl_matrix_free(cov_par);
-    gsl_vector_free(par);
-}
-
-Continuum::Continuum(CVEC & wave, CVEC & flux, int order, int medsize, int max_iter){
-    _wave = wave;
-    _norm_wave = normalize_wave(wave);
-    _flux = flux;
-    _order = order;
-    _max_iter = max_iter;
+    if ( work != nullptr){
+        gsl_multifit_robust_free(work);
+        gsl_matrix_free(X);
+        gsl_matrix_free(cov_par);
+        gsl_vector_free(par);
+        gsl_vector_free(cache);
+    }
     set_all_iter_zero();
 }
 
-// Continuum::~Continuum(){
-//     remove_gsl();
-// }
+void Continuum::fill_X(){
+    for (size_t ind = 0; ind < _norm_wave.size(); ++ind){
+        double wa = _norm_wave[ind];
+        gsl_sf_legendre_Pl_array(_order, wa, cache->data);
+        gsl_matrix_set_row(X, ind, cache);
+    }
+}
 
-// int Continuum::get_size(){
-//     return _wave.size();
-// }
+Continuum::Continuum(CVEC & wave, CVEC & flux, size_t order, size_t medsize, size_t max_iter){
+    _norm_wave = normalize_wave(wave);
+    _flux = flux;
+    _order = order;
+    _med_size = medsize;
+    _max_iter = max_iter;
+    set_all_iter_zero();
+    ini_gsl(_norm_wave.size(), _order);
+    fill_X();
+}
+
+VEC get_norm_wave(size_t specsize){
+    double step = 1.9999999 / specsize;
+    VEC out;
+    for (size_t ind = 0; ind < specsize; ++ind)
+        out.push_back(-0.99999999999 + ind * step);
+    return out;
+}
+
+Continuum::Continuum(CVEC & flux, size_t order, size_t medsize, size_t max_iter){
+    _norm_wave = get_norm_wave(flux.size());
+    _flux = flux;
+    _order = order;
+    _med_size = medsize;
+    _max_iter = max_iter;
+    set_all_iter_zero();
+    ini_gsl(_norm_wave.size(), _order);
+    fill_X();
+}
+
+
+Continuum::Continuum(int fluxsize, size_t order, size_t medsize, size_t max_iter){
+    _norm_wave = get_norm_wave(fluxsize);
+    _order = order;
+    _med_size = medsize;
+    _max_iter = max_iter;
+    set_all_iter_zero();
+    ini_gsl(_norm_wave.size(), _order);
+    fill_X();
+}
+
+Continuum::~Continuum(){
+    remove_gsl();
+}
+
+int Continuum::size() const {
+    return _norm_wave.size();
+}
 
 int median_filter(gsl_vector * arr, int medsize, gsl_vector * out){
     gsl_filter_rmedian_workspace * rmedian_p = gsl_filter_rmedian_alloc(medsize);

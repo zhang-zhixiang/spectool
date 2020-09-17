@@ -14,7 +14,8 @@ class Continuum{
     gsl_multifit_robust_workspace * work;
     gsl_matrix * X, * cov_par;
     gsl_vector * x, * y, * par;
-    VEC _wave;
+    gsl_vector * cache;
+    // VEC _wave;
     VEC _flux;
     VEC _norm_wave;
     int _order;
@@ -23,6 +24,7 @@ class Continuum{
     void set_all_iter_zero();
     void ini_gsl(size_t specsize, size_t order);
     void remove_gsl();
+    void fill_X();
 
 public:
     Continuum(CVEC & wave, CVEC & flux, size_t order, size_t medsize, size_t max_iter);
