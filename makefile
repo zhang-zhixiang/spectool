@@ -19,8 +19,9 @@ librebin = rebin$(suffix)
 libconvol = convol$(suffix)
 libccf = libccf$(suffix)
 liblogccf = liblogccf$(suffix)
+libspecfunc = libspecfunc$(suffix)
 
-default : $(libconvol) $(librebin) $(libccf) $(liblogccf)
+default : $(libconvol) $(librebin) $(libccf) $(liblogccf) $(libspecfunc)
 
 $(libconvol) : convol.cpp
 	$(CC) convol.cpp -o $(libconvol) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(GSL)
@@ -34,5 +35,8 @@ $(libccf) : iccf.cpp
 $(liblogccf) : logccf.cpp
 	$(CC) logccf.cpp -o $(liblogccf) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(FFTW)
 
+$(libspecfunc) : cppspecfunc.cpp
+	$(CC) cppspecfunc.cpp -o $(libspecfunc) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(GSL)
+
 clean :
-	rm $(libconvol) $(librebin) $(libccf) $(liblogccf)
+	rm $(libconvol) $(librebin) $(libccf) $(liblogccf) $(libspecfunc)
