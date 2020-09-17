@@ -14,16 +14,29 @@ VEC normalize_wave(CVEC & wave){
     return out;
 }
 
-// Continuum::Continuum(CVEC & wave, CVEC & flux, int order=5, int max_iter=1){
-//     _wave = wave;
-//     _norm_wave = normalize_wave(wave);
-//     _flux = flux;
-//     _order = order;
-//     _max_iter = max_iter;
-//     X = cov = nullptr;
-//     x = y = c = nullptr;
-//     work = nullptr;
-// }
+void Continuum::set_all_iter_zero(){
+    work = nullptr;
+    X = nullptr;
+    cov_par = nullptr;
+    x = nullptr;
+    y = nullptr;
+    par = nullptr;
+    specout_itr = nullptr;
+    contout_itr = nullptr;
+}
+
+void Continuum::ini_gsl (int specsize, int order){
+    // for name in 
+}
+
+Continuum::Continuum(CVEC & wave, CVEC & flux, int order, int medsize, int max_iter){
+    _wave = wave;
+    _norm_wave = normalize_wave(wave);
+    _flux = flux;
+    _order = order;
+    _max_iter = max_iter;
+    set_all_iter_zero();
+}
 
 // Continuum::~Continuum(){
 //     remove_gsl();
@@ -33,12 +46,11 @@ VEC normalize_wave(CVEC & wave){
 //     return _wave.size();
 // }
 
-gsl_vector * median_filter(gsl_vector * arr, int medsize){
-    gsl_vector *out = gsl_vector_alloc(arr->size);
+int median_filter(gsl_vector * arr, int medsize, gsl_vector * out){
     gsl_filter_rmedian_workspace * rmedian_p = gsl_filter_rmedian_alloc(medsize);
     gsl_filter_rmedian(GSL_FILTER_END_PADVALUE, arr, out, rmedian_p);
     gsl_filter_rmedian_free(rmedian_p);
-    return out;
+    return 1;
 }
 
 VEC get_normalized_spec(CVEC & wave, CVEC & flux, int medsize=35, int order=5){
@@ -49,7 +61,8 @@ VEC get_normalized_spec(CVEC & wave, CVEC & flux, int medsize=35, int order=5){
         // gsl_vector_set(_wave, ind, norm_wave[ind]);
         gsl_vector_set(_flux, ind, flux[ind]);
     }
-    gsl_vector * spec_med = median_filter(_flux, medsize);
+    gsl_vector * spec_med = gsl_vector_alloc(_flux->size);
+    median_filter(_flux, medsize, spec_med);
     gsl_vector *par = gsl_vector_alloc(order+1);
     gsl_matrix *X = gsl_matrix_alloc(norm_wave.size(), order+1);
     gsl_matrix *cov_par = gsl_matrix_alloc(order+1, order+1);
