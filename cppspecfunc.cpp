@@ -106,6 +106,50 @@ int Continuum::size() const {
     return _norm_wave.size();
 }
 
+void Continuum::set_spec(CVEC & wave, CVEC & flux){
+    if ( wave.size() != _norm_wave.size()) ini_gsl(wave.size(), _order);
+    _norm_wave = normalize_wave(wave);
+    fill_X();
+    _flux = flux;
+}
+
+void Continuum::set_spec(CVEC & flux){
+    if (flux.size() != _norm_wave.size()){
+        ini_gsl(flux.size(), _order);
+        _norm_wave = get_norm_wave(flux.size());
+        fill_X();
+    }
+    _flux = flux;
+}
+
+void Continuum::set_spec(double * spec_begin, double * spec_end){
+    int length = spec_end - spec_begin;
+    if (_norm_wave.size() != length){
+        ini_gsl(length, _order);
+        _norm_wave = get_norm_wave(length);
+        fill_X();
+        _flux.resize(length);
+    }
+    for (size_t ind = 0; ind < length; ++ind)
+        _flux[ind] = *(spec_begin + ind);
+}
+
+void Continuum::set_order(size_t order){
+    if (_order != order){
+        _order = order;
+        ini_gsl(_norm_wave.size(), _order);
+        fill_X();
+    }
+}
+
+void Continuum::set_median_filter_size(size_t medsize){
+    _med_size = medsize;
+}
+
+void Continuum::set_max_iteration(size_t max_iter){
+    _max_iter = max_iter;
+}
+
 int median_filter(gsl_vector * arr, int medsize, gsl_vector * out){
     gsl_filter_rmedian_workspace * rmedian_p = gsl_filter_rmedian_alloc(medsize);
     gsl_filter_rmedian(GSL_FILTER_END_PADVALUE, arr, out, rmedian_p);

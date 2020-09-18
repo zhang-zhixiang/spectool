@@ -32,12 +32,12 @@ public:
     Continuum(int fluxsize, size_t order, size_t medsize, size_t max_iter);
     ~Continuum();
     int size() const;
-    bool set_spec(CVEC & wave, CVEC & flux);
-    bool set_spec(CVEC & flux);
-    bool set_spec(double * spec_begin, double * spec_end);
-    bool set_order(size_t order);
-    bool set_median_filter_size(size_t medsize);
-    bool set_max_iteration(size_t max_iter);
+    void set_spec(CVEC & wave, CVEC & flux);
+    void set_spec(CVEC & flux);
+    void set_spec(double * spec_begin, double * spec_end);
+    void set_order(size_t order);
+    void set_median_filter_size(size_t medsize);
+    void set_max_iteration(size_t max_iter);
     VEC get_continuum();
     VEC get_norm_spec();
     py::array_t<double> get_continuum_arr();
