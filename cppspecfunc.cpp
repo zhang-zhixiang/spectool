@@ -262,8 +262,8 @@ py::array_t<double> numpy_get_normalized_spec(CVEC & wave, CVEC & flux, int meds
     return VEC2numpyarr(get_normalized_spec(wave, flux, medsize, order));
 }
 
-PYBIND11_MODULE(libspecfunc, m) {
-    m.doc() = "Simple test";
+// PYBIND11_MODULE(libspecfunc, m) {
+//     m.doc() = "Simple test";
 
-    m.def("get_normalized_spec", &numpy_get_normalized_spec, "get the normalized spec after removing the continuum");
-}
+//     m.def("get_normalized_spec", &numpy_get_normalized_spec, "get the normalized spec after removing the continuum");
+// }

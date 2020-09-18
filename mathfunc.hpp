@@ -29,5 +29,13 @@ auto standarddif(Iter begin, Iter end){
     return std::sqrt(out/size);
 }
 
+template <typename Iter, typename IterB>
+auto normalize_arr(Iter begin, Iter end, IterB out){
+    auto meanval = mean(begin, end);
+    auto stdval = standarddif(begin, end);
+    while (begin != end)
+        *(out++) = (*(begin++) - meanval) / stdval;
+}
+
 
 #endif // !__MATHFUNC_H__

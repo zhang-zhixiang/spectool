@@ -32,8 +32,8 @@ $(librebin) : rebin.cpp
 $(libccf) : iccf.cpp
 	$(CC) iccf.cpp -o $(libccf) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11)
 
-$(liblogccf) : logccf.cpp
-	$(CC) logccf.cpp -o $(liblogccf) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(FFTW)
+$(liblogccf) : logccf.cpp cppspecfunc.cpp types.cpp
+	$(CC) logccf.cpp cppspecfunc.cpp types.cpp -o $(liblogccf) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(FFTW)
 
 $(libspecfunc) : cppspecfunc.cpp
 	$(CC) cppspecfunc.cpp -o $(libspecfunc) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(GSL)
