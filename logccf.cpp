@@ -11,6 +11,7 @@
 #include "pybind11/stl.h"
 #include "types.h"
 #include "cppspecfunc.h"
+#include "mathfunc.hpp"
 
 namespace py = pybind11;
 
@@ -29,6 +30,7 @@ private:
     size_t _size;
     double * _sig;
     double _shift;
+    void set_all_iter_zero();
     void ini_par(int size);
     void destroy_par();
 public:
@@ -54,28 +56,31 @@ public:
     ~Shift_spec();
 };
 
-Shift_spec::Shift_spec(CVEC & spec):
-    _in(nullptr), _out(nullptr), _fourtr(nullptr),
-    _four_with_shift(nullptr), 
-    _p(nullptr), _ifft(nullptr),
-    _size(0), _sig(nullptr), _shift(0){
+void Shift_spec::set_all_iter_zero(){
+    _in = nullptr;
+    _out = nullptr;
+    _fourtr = nullptr;
+    _four_with_shift = nullptr;
+    _p = nullptr;
+    _ifft = nullptr;
+    _size = 0;
+    _sig = nullptr;
+    _shift = 0;
+}
+
+Shift_spec::Shift_spec(CVEC & spec){
+    set_all_iter_zero();
     set_spec(spec);
 }
 
-Shift_spec::Shift_spec(double * start, double * end):
-    _in(nullptr), _out(nullptr), _fourtr(nullptr),
-    _four_with_shift(nullptr), 
-    _p(nullptr), _ifft(nullptr),
-    _size(0), _sig(nullptr), _shift(0){
+Shift_spec::Shift_spec(double * start, double * end){
+    set_all_iter_zero();
     set_spec(start, end - start);
 }
 
-Shift_spec::Shift_spec(int size):
-    _in(nullptr), _out(nullptr), _fourtr(nullptr),
-    _four_with_shift(nullptr), 
-    _p(nullptr), _ifft(nullptr),
-    _size(0), _sig(nullptr), _shift(0){
-        ini_par(size);
+Shift_spec::Shift_spec(int size){
+    set_all_iter_zero();
+    ini_par(size);
 }
 
 void Shift_spec::destroy_par(){
