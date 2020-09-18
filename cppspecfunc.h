@@ -13,7 +13,7 @@ class Continuum{
     Continuum& operator=(const Continuum&);
     gsl_multifit_robust_workspace * work;
     gsl_matrix * X, * cov_par;
-    gsl_vector * x, * y, * par;
+    gsl_vector * spec_med, * par;
     gsl_vector * cache;
     // VEC _wave;
     VEC _flux;
@@ -21,10 +21,12 @@ class Continuum{
     int _order;
     int _med_size;
     int _max_iter;
+    bool flag_fit;
     void set_all_iter_zero();
     void ini_gsl(size_t specsize, size_t order);
     void remove_gsl();
     void fill_X();
+    int fit_cont();
 
 public:
     Continuum(CVEC & wave, CVEC & flux, size_t order, size_t medsize, size_t max_iter);
