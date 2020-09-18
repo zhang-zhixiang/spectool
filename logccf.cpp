@@ -14,8 +14,8 @@
 
 namespace py = pybind11;
 
-typedef std::vector<double> VEC;
-typedef const std::vector<double> CVEC;
+std::random_device r;
+std::default_random_engine e1(r());
 
 class Shift_spec {
     // The code refer the example code in blog https://www.cnblogs.com/aiguona/p/9407425.html
@@ -36,6 +36,7 @@ public:
 
     Shift_spec(int size);
     Shift_spec(CVEC & spec);
+    Shift_spec(double * start, double * end);
     bool set_spec(CVEC & spec);
     template <typename Iter> bool set_spec(Iter begin, int size){
         if (_in == nullptr || _size != size)
@@ -59,6 +60,14 @@ Shift_spec::Shift_spec(CVEC & spec):
     _p(nullptr), _ifft(nullptr),
     _size(0), _sig(nullptr), _shift(0){
     set_spec(spec);
+}
+
+Shift_spec::Shift_spec(double * start, double * end):
+    _in(nullptr), _out(nullptr), _fourtr(nullptr),
+    _four_with_shift(nullptr), 
+    _p(nullptr), _ifft(nullptr),
+    _size(0), _sig(nullptr), _shift(0){
+    set_spec(start, end - start);
 }
 
 Shift_spec::Shift_spec(int size):
@@ -169,6 +178,42 @@ auto get_ccf_value(Iter begin, Iter end, Iterb begin_ref, bool mult=true){
     return out / length;
 }
 
+auto _get_ccf(double * spec_start, double * spec_end, double * spec_ref, int sl, int sr, double resolution, const bool mult=true){
+    const int margin = std::max(std::abs(sl), std::abs(sr));
+    VEC outshift, rlst;
+    const auto sfrom = spec_start + margin;
+    const auto send = spec_end - margin;
+    for ( int shift = sl; shift <= sr; ++shift){
+        auto tfrom = spec_ref + margin - shift;
+        auto r = get_ccf_value(sfrom, send, tfrom, mult);
+        outshift.push_back(double(shift));
+        rlst.push_back(r);
+    }
+    int indminmax = 0;
+    if (mult == true){
+        auto itrmax = std::max_element(rlst.begin(), rlst.end());
+        indminmax = std::distance(rlst.begin(), itrmax);
+    } else {
+        auto itrmin = std::min_element(rlst.begin(), rlst.end());
+        indminmax = std::distance(rlst.begin(), itrmin);
+    }
+    double aprox_shift = outshift[indminmax];
+
+    if (resolution > 1)
+        return std::make_tuple(outshift, rlst);
+
+    int specsize = spec_end - spec_start;
+    Shift_spec shiftmodel(spec_ref, spec_ref+specsize);
+    const auto tbegin = shiftmodel.specout + margin;
+    for(double shift = aprox_shift-1; shift <= aprox_shift+1; shift+=resolution){
+        shiftmodel.get_shift_spec(shift);
+        auto r = get_ccf_value(sfrom, send, tbegin, mult);
+        outshift.push_back(shift);
+        rlst.push_back(r);
+    }
+    return std::make_tuple(outshift, rlst);
+}
+
 auto get_ccf(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge, double resolution, const bool mult=true){
     // return shift_peak, rmax
     const int lefte = int(std::floor(left_edge));
@@ -227,37 +272,17 @@ auto get_shift(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge
     return std::make_tuple(shift, rmax);
 }
 
-std::random_device r;
-std::default_random_engine e1(r());
-
-// bool check_data(CVEC & data){
-//     for (auto val : data)
-//         if(std::abs(val) > 1.0e5){
-//             std::cout << "bad value !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " << val << std::endl;
-//             return false;
-//         }
-//     return true;
-// }
-
 auto get_shift_mc(CVEC & spec, CVEC & spec_ref, double left_edge, double right_edge, double resolution, int mcnumber, double inc_ration, bool mult=true){
-    // check_data(spec);
-    // check_data(spec_ref);
     int ccfsize = int(spec.size() * inc_ration);
     const int lefte = int(std::floor(left_edge));
     const int righte = int(std::ceil(right_edge));
     const int range = std::max(std::abs(lefte), std::abs(righte));
     int start_window = spec.size() - ccfsize - 2*range - 1;
     Shift_spec shiftmodel(ccfsize + 2*range);
-    // std::cout << "len spec = " << spec.size() << std::endl;
-    // std::cout << "len spec_ref = " << spec_ref.size() << std::endl;
-    // std::cout << "ccf size = " << ccfsize << std::endl;
-    // std::cout << "margin = " << range << std::endl;
-    // std::cout << "start window = " << start_window << std::endl;
     std::uniform_int_distribution<int> uniform_dist(0, start_window);
     VEC outbestshiftlst, outrmaxlst;
     for (size_t loop = 0; loop < mcnumber; ++loop){
         int from = uniform_dist(e1);
-        // std::cout << from << "  ";
         VEC outshift, rlst;
         const auto sfrom = spec.begin() + range + from;
         const auto send = spec.begin() + range + from + ccfsize;
@@ -297,23 +322,9 @@ auto get_shift_mc(CVEC & spec, CVEC & spec_ref, double left_edge, double right_e
         }
         double shift = outshift[indminmax];
         double rmax = rlst[indminmax];
-        // if (std::isinf(rmax) || std::abs(rmax) > 1.0e10){
-        //     for (size_t ind = 0; ind < ccfsize + range; ++ind){
-        //         std::cout << *(sfrom+ind) << "  ";
-        //     }
-        //     std::cout << std::endl;
-        //     for (auto val : numpyarr2VEC(shiftmodel.get_shift_spec_arr())){
-        //         std::cout << val << "  ";
-        //     }
-        //     for( size_t ind = 0; ind < spec.size(); ++ind){
-        //         std::cout << shiftmodel.specout << "  ";
-        //     }
-        //     std::cout << std::endl;
-        // }
         outbestshiftlst.push_back(shift);
         outrmaxlst.push_back(rmax);
     }
-    // std::cout << std::endl;
     return make_tuple(outbestshiftlst, outrmaxlst);
 }
 
