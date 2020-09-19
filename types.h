@@ -15,7 +15,7 @@ py::array_t<double> VEC2numpyarr(const std::vector<double> & vec);
 std::vector<double> numpyarr2VEC(const py::array_t<double> & input);
 
 template <typename Iter>
-py::array_t<double> VEC2numpyarr(Iter begin, Iter end){
+inline py::array_t<double> VEC2numpyarr(Iter begin, Iter end){
     int size = end - begin;
     auto result = py::array_t<double>(size);
     py::buffer_info buf = result.request();

@@ -19,14 +19,3 @@ std::vector<double> numpyarr2VEC(const py::array_t<double> & input){
         out[ind] = ptr[ind];
     return out;
 }
-
-template <typename Iter>
-py::array_t<double> VEC2numpyarr(Iter begin, Iter end){
-    int size = end - begin;
-    auto result = py::array_t<double>(size);
-    py::buffer_info buf = result.request();
-    double *ptr = (double *) buf.ptr;
-    for (size_t ind = 0; ind < size; ++ind)
-        ptr[ind] = *(begin+ind);
-    return result;
-}

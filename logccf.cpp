@@ -186,17 +186,17 @@ auto get_ccf_value(Iter begin, Iter end, Iterb begin_ref, bool mult=true){
 auto _get_ccf(double * spec_start, double * spec_end, double * spec_ref, int sl, int sr, double resolution, const bool mult=true){
     int length = spec_end - spec_start;
     Continuum speccont(length, 3, 30, 3);
-    // speccont.set_spec(spec_start, spec_end);
-    // auto specitr = speccont.get_norm_spec_itr();
-    // spec_start = specitr.get();
-    // spec_end = specitr.get() + length;
-    // normalize_arr(spec_start, spec_end, spec_start);
+    speccont.set_spec(spec_start, spec_end);
+    auto specitr = speccont.get_norm_spec_itr();
+    spec_start = specitr.get();
+    spec_end = specitr.get() + length;
+    normalize_arr(spec_start, spec_end, spec_start);
 
-    // Continuum spec_ref_cont(length, 3, 30, 3);
-    // spec_ref_cont.set_spec(spec_ref, spec_ref+length);
-    // auto spec_ref_itr = spec_ref_cont.get_norm_spec_itr();
-    // spec_ref = spec_ref_itr.get();
-    // normalize_arr(spec_ref, spec_ref+length, spec_ref);
+    Continuum spec_ref_cont(length, 3, 30, 3);
+    spec_ref_cont.set_spec(spec_ref, spec_ref+length);
+    auto spec_ref_itr = spec_ref_cont.get_norm_spec_itr();
+    spec_ref = spec_ref_itr.get();
+    normalize_arr(spec_ref, spec_ref+length, spec_ref);
 
     const int margin = std::max(std::abs(sl), std::abs(sr));
     VEC outshift, rlst;
