@@ -59,15 +59,6 @@ def main():
     plt.hist(velocitylst, bins=50)
 
     plt.figure()
-    t1 = time.time()
-    velocitylst, rmaxlst = ccf.find_radial_velocity_mc_full(wave1, flux1, wave2, flux2, mult=True, plot=False, ccfleft=-800, ccfright=800, mcnumber=100, incratio=0.25)
-    t2 = time.time()
-    print('find_radial_velocity_mc_full run time =', t2 - t1)
-    # print(velocitylst)
-    # print(rmaxlst)
-    plt.hist(velocitylst, bins=50)
-
-    plt.figure()
     shift_med = np.median(velocitylst)
     print('median velocity =', shift_med)
     cont_temp = spectool.spec_func.continuum(wave2, flux2)
