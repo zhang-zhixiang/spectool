@@ -144,7 +144,7 @@ void Continuum::set_spec(CVEC& flux) {
   flag_fit = false;
 }
 
-void Continuum::set_spec(double* spec_begin, double* spec_end) {
+void Continuum::set_spec(const double* spec_begin, const double* spec_end) {
   int length = spec_end - spec_begin;
   if (_norm_wave.size() != length) {
     ini_gsl(length, _order);

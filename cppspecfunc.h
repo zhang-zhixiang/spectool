@@ -40,7 +40,7 @@ class Continuum {
   int size() const;
   void set_spec(CVEC& wave, CVEC& flux);
   void set_spec(CVEC& flux);
-  void set_spec(double* spec_begin, double* spec_end);
+  void set_spec(const double* spec_begin, const double* spec_end);
   void set_order(size_t order);
   void set_median_filter_size(size_t medsize);
   void set_max_iteration(size_t max_iter);

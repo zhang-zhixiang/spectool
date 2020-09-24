@@ -1,10 +1,12 @@
 import math
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from . import libccf
 from . import spec_func
 from . import rebin
 from . import liblogccf
+from . import libspecfunc
 
 
 def shiftspec(flux, shift):
@@ -204,8 +206,14 @@ def find_radial_velocity_mc(wave, flux, wave_ref, flux_ref, mult=True, plot=Fals
     newave = np.exp(lognewave)
     newflux = np.array(rebin.rebin(wave, flux, newave))
     newflux_ref = np.array(rebin.rebin(wave_ref, flux_ref, newave))
+    # t1 = time.time()
+    # binsize = int(newflux.size / 50) + 1
+    # cont = libspecfunc.get_normalized_spec(newave, newflux, binsize, 5)
     cont = spec_func.continuum(newave, newflux, maxiterations=1)
+    # cont_ref = libspecfunc.get_normalized_spec(newave, newflux_ref, binsize, 5)
     cont_ref = spec_func.continuum(newave, newflux_ref, maxiterations=1)
+    # t2 = time.time()
+    # print('reduce continuum time spend =', t2 - t1)
     norm_cont = (cont - np.mean(cont)) / np.std(cont)
     norm_cont_ref = (cont_ref - np.mean(cont_ref)) / np.std(cont_ref)
     shiftleft = int(math.floor(ccfleft / c / log_delta_w))
@@ -217,11 +225,82 @@ def find_radial_velocity_mc(wave, flux, wave_ref, flux_ref, mult=True, plot=Fals
     norm_cont_ref[argt] = 0.0
     if len(norm_cont[argc]) > 0 or len(norm_cont_ref[argt] > 0):
         print('Caution !!, NaN or inf ocured')
+    # t1 = time.time()
     bestshiftlst, rmaxlst = liblogccf.get_shift_mc(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, mcnumber, incratio, True)
+    # t2 = time.time()
+    # print('ccf mc time spend =', t2-t1)
     bestshiftlst = np.array(bestshiftlst)
     rmaxlst = np.array(rmaxlst)
     velocitylst = bestshiftlst * log_delta_w * c
     if plot is True:
+        shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
+        shiftlst = np.array(shiftlst)
+        rlst = np.array(rlst)
+        fig1 = plt.figure()
+        ax1 = fig1.add_subplot(111)
+        ax1.plot(newave, norm_cont)
+        ax1.plot(newave, norm_cont_ref)
+        arg = np.argsort(shiftlst)
+        shiftlst = shiftlst[arg]
+        rlst = rlst[arg]
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(shiftlst, rlst)
+        fig1.show()
+        fig.show()
+        # plt.show()
+    return velocitylst, rmaxlst
+
+
+def find_radial_velocity_mc_full(wave, flux, wave_ref, flux_ref,
+                                 mult=True, plot=False, ccfleft=-800,
+                                 ccfright=800, velocity_resolution=1.0,
+                                 mcnumber=50, incratio=0.5):
+    """find the radial velocity using ccf method
+
+    Args:
+        wave (numpy.ndarray): spectral wave
+        flux (numpy.ndarray): spectral flux
+        wave_ref (numpy.ndarray): the spectral wave of template
+        flux_ref (numpy.ndarray): the spectral flux of template
+        mult (bool, optional): use multiplication to cal the ccf value, else use diff. Defaults to True.
+        plot (bool, optional): whether plot the ccf profile. Defaults to False.
+        ccfleft (int, optional): the left edge of ccf funtion, in the unit of km/s. Defaults to -800.
+        ccfright (int, optional): the right edge of ccf function, in the unit of km/s. Defaults to 800.
+        velocity_resolution (float, optional): the velocity resolution of ccf, in the unit of km/s. Defaults to 1.0.
+
+    Returns:
+        velocity(float, km/s): the velocity of the spectrum compared with the template. Here positive value means red shift,
+        negative value means blue shift.
+    """
+    c = 299792.458 # km/s
+    logwave = np.log(wave)
+    logwave_ref = np.log(wave_ref)
+    log_delta_w = np.min(np.diff(logwave))
+    logwbegin = min(logwave[0], logwave_ref[0])
+    logwend = max(logwave[-1], logwave_ref[-1])
+    lognewave = np.arange(logwbegin, logwend, log_delta_w)
+    newave = np.exp(lognewave)
+    newflux = rebin.rebin(wave, flux, newave)
+    newflux_ref = rebin.rebin(wave_ref, flux_ref, newave)
+    shiftleft = int(math.floor(ccfleft / c / log_delta_w))
+    shiftright = int(math.ceil(ccfright / c / log_delta_w))
+    delta_shift = velocity_resolution / c / log_delta_w
+    argc = np.isfinite(newflux) == False
+    argt = np.isfinite(newflux_ref) == False
+    newflux[argc] = 0.0
+    newflux_ref[argt] = 0.0
+    
+    if len(newflux[argc]) > 0 or len(newflux_ref[argt] > 0):
+        print('Caution !!, NaN or inf ocured')
+    bestshiftlst, rmaxlst = liblogccf.get_shift_mc(newflux, newflux_ref, shiftleft,
+                                                   shiftright, delta_shift, mcnumber, incratio, True)
+    velocitylst = bestshiftlst * log_delta_w * c
+    if plot is True:
+        cont = spec_func.continuum(newave, newflux, maxiterations=1)
+        cont_ref = spec_func.continuum(newave, newflux_ref, maxiterations=1)
+        norm_cont = (cont - np.mean(cont)) / np.std(cont)
+        norm_cont_ref = (cont_ref - np.mean(cont_ref)) / np.std(cont_ref)
         shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
         shiftlst = np.array(shiftlst)
         rlst = np.array(rlst)
