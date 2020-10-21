@@ -235,7 +235,7 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False):
     scale = func(newave, *popt)
     tmpuniform = newflux / scale
     std = np.std(tmpuniform)
-    arg = np.where(tmpuniform > 1 - 2*std)
+    arg = np.where(tmpuniform > 1 - 0.5*std)
     newave = newave[arg]
     newflux = newflux[arg]
     size = newave.size
@@ -248,7 +248,7 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False):
 
         tmpuniform = newflux / scale
         std = np.std(tmpuniform)
-        arg = np.where(tmpuniform > 1 - 2*std)
+        arg = np.where(tmpuniform > 1 - std)
         keep_size = arg[0].size
         if keep_size < degree + 1:
             break
@@ -268,5 +268,6 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False):
         ax = fig.add_subplot(111)
         ax.plot(wave, tmpscale)
         ax.plot(wave, flux)
+        # fig = 
         plt.show()
     return flux / tmpscale
