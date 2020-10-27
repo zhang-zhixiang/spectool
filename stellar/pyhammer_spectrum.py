@@ -10,6 +10,10 @@ import bisect
 from scipy.optimize import curve_fit
 import csv
 from scipy.interpolate import interp1d
+import matplotlib.pyplot as plt
+from .. import libccf
+from .. import spec_func
+from .. import ccf
 
 
 # from pyhamimports import *
@@ -830,6 +834,73 @@ class Spectrum(object):
         elif bestGuess['specType'] == -1:
             return np.nan
         return path + tempName
+
+    def findRadialVelocity2(self, airToVac=False, plot=False):
+        wave = self._wavelength
+        flux = self._flux
+        arg = np.isfinite(flux)
+        wave = wave[arg]
+        flux = flux[arg]
+        if airToVac is True:
+            wave = spec_func.air2vac(wave)
+        tempName = self.getFullTempName()
+
+        with warnings.catch_warnings():
+            # Ignore a very particular warning from some versions of astropy.io.fits
+            # that is a known bug and causes no problems with loading fits data.
+            warnings.filterwarnings('ignore', message = 'Could not find appropriate MS Visual C Runtime ')
+            if self._isSB2:
+                temp = fits.open(tempName)
+            else:
+                temp = fits.open(tempName)
+                                    
+        tempFlux = temp[1].data['flux']
+        tempWave = 10**temp[1].data['loglam']
+        arg = np.where((tempWave > wave[0]) & (tempWave < wave[-1]))
+        tempWave = tempWave[arg]
+        tempFlux = tempFlux[arg]
+        # tempFlux = Spectrum.normalize(tempWave, self._normWavelength, tempFlux)
+
+        contFlux = spec_func.continuum(wave, flux, degree=10)
+        # plt.plot(wave, contFlux)
+        # plt.show()
+        contTempFlux = spec_func.continuum(tempWave, tempFlux)
+        edgeSpec = int(len(wave) / 4)
+        edgeTemp = int(len(tempWave) / 4)
+        sonWave = wave[edgeSpec:-edgeSpec]
+        sonContFlux = contFlux[edgeSpec:-edgeSpec]
+        sonTempWave = tempWave[edgeTemp:-edgeTemp]
+        sonContTempFlux = contTempFlux[edgeTemp:-edgeTemp]
+        # print(len(sonWave))
+        # print(len(sonContFlux))
+        # print(len(sonTempWave))
+        # print(len(sonContTempFlux))
+
+        velList = np.arange(-1000, 1000, 0.1)
+        # plt.plot(sonWave, sonContFlux)
+        # plt.plot(sonTempWave, sonContTempFlux)
+        # plt.show()
+        rlst = libccf.iccf_spec(sonWave, sonContFlux, sonTempWave, sonContTempFlux, velList)
+
+        # argPeak = np.argmax(rlst)
+        # velPeak = velList[argPeak]
+        rmax, velCenter, velPeak = ccf.get_ccf_info(velList, rlst)
+
+        if plot is True:
+            fig = plt.figure(figsize=(10, 4))
+            ax = fig.add_axes([0.65, 0.1, 0.33, 0.85])
+            ax.plot(velList, rlst, color='C0')
+            ax.axhline(0.8*rmax, label='0.8 rmax', color='C1')
+            ax.axvline(velCenter, linestyle=':', label='velocity center = %.2f' % velCenter, color='C2')
+            ax.axvline(velPeak, linestyle=':', label='velocity peak = %.2f' % velPeak, color='C3')
+            ax.legend()
+
+            ax2 = fig.add_axes([0.05, 0.1, 0.53, 0.85])
+            ax2.plot(sonWave, sonContFlux, label='spec', lw=0.8)
+            ax2.plot(sonTempWave, sonContTempFlux, label='template', lw=0.8)
+            ax2.legend()
+            plt.show()
+        return velCenter
 
     def findRadialVelocity(self):
         """
