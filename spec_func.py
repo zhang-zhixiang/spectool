@@ -235,7 +235,7 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False):
     scale = func(newave, *popt)
     tmpuniform = newflux / scale
     std = np.std(tmpuniform)
-    arg = np.where(tmpuniform > 1 - 0.5*std)
+    arg = np.where(tmpuniform > 1 - std)
     newave = newave[arg]
     newflux = newflux[arg]
     size = newave.size

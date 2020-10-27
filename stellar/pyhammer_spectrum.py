@@ -1297,3 +1297,17 @@ class Spectrum(object):
     def guess(self):
         return self._guess 
     
+
+def example():
+    name = 'abc.fits'
+    spec = Spectrum()
+    spec.readFile(name)
+    spec.guessSpecType()
+    tmpName = spec.getFullTempName()
+    print(tmpName)
+    shift = spec.findRadialVelocity()
+    spec.shiftToRest(shift)
+    spec.interpOntoGrid()
+    spec.guessSpecType()
+    tmpName = spec.getFullTempName()
+    print(tmpName)
