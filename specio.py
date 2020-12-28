@@ -78,6 +78,15 @@ def read_txt_spec(fn):
     return wave, flux, err
 
 
+def read_sdss_spec(fn):
+    hdul = fits.open(fn)
+    data = hdul[1].data
+    wave = data['loglam'].astype('float64')
+    flux = data['flux'].astype('float64')
+    ivar = data['ivar'].astype('float64')
+    return wave, flux, ivar
+
+
 def read_spec(fn):
     data = 123
 

@@ -134,6 +134,21 @@ def mask_wave(wave, mask=None):
     return np.where(arg)
 
 
+def get_delta_wave(wave):
+    """return the bin width of each wavelength points
+
+    Args:
+        wave (numpy.ndarray): wavelength array
+
+    Returns:
+        widths(numpy.ndarray): bin width array
+    """
+    dif = np.diff(wave)
+    dif1 = np.append([dif[0]], dif) / 2
+    dif2 = np.append(dif, [dif[-1]]) / 2
+    return dif1 + dif2
+
+
 def select_wave(wave, select_window=None):
     """return the index in the selected windows
 
@@ -190,7 +205,7 @@ def spec_match(wave, flux, wave_ref, flux_ref, mask=None, degree=20):
     # return out
 
 
-def continuum(wave, flux, degree=7, maxiterations=10, plot=False):
+def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission=False):
     """reduce the spectrum continuum, and return the uniform flux
     after the continuum correction
 
@@ -235,7 +250,10 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False):
     scale = func(newave, *popt)
     tmpuniform = newflux / scale
     std = np.std(tmpuniform)
-    arg = np.where(tmpuniform > 1 - std)
+    if rejectemission == False:
+        arg = np.where(tmpuniform > 1 - std)
+    else:
+        arg = np.where((tmpuniform > 1 - std) & (tmpuniform < 1 + std))
     newave = newave[arg]
     newflux = newflux[arg]
     size = newave.size
@@ -248,7 +266,10 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False):
 
         tmpuniform = newflux / scale
         std = np.std(tmpuniform)
-        arg = np.where(tmpuniform > 1 - std)
+        if rejectemission == False:
+            arg = np.where(tmpuniform > 1 - std)
+        else:
+            arg = np.where((tmpuniform > 1 - std) & (tmpuniform < 1 + std))
         keep_size = arg[0].size
         if keep_size < degree + 1:
             break
