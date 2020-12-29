@@ -171,9 +171,20 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
         arg = np.argsort(shiftlst)
         shiftlst = shiftlst[arg]
         rlst = rlst[arg]
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(shiftlst, rlst)
+        velocitylst = shiftlst * log_delta_w * c
+        fig = plt.figure(figsize=(13, 4))
+        ax1 = fig.add_axes([0.05, 0.05+0.02, 0.6, 0.4])
+        ax2 = fig.add_axes([0.05, 0.53+0.02, 0.6, 0.4])
+        ax3 = fig.add_axes([0.68, 0.05+0.02, 0.28, 0.88])
+        # ax = fig.add_subplot(111)
+        ax1.plot(newave, cont, label='spec')
+        ax1.legend()
+        ax2.plot(newave, cont_ref, color='C1', label='template')
+        ax2.legend()
+        ax3.plot(velocitylst, rlst)
+        ax3.axvline(velocity, color='red', linestyle='--', label='vel = %.2f km/s' % velocity)
+        ax3.axhline(rmax, color='C3', linestyle=':', label='rmax = %.2f' % rmax)
+        ax3.legend()
         plt.show()
     return velocity
 
