@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from astropy.io import fits
 from PyAstronomy.pyasl import read1dFitsSpec
@@ -16,6 +17,47 @@ def read_iraf_spec(fn, band=0):
     flux = data[0, band, :].astype('float64')
     err = data[3, band, :].astype('float64')
     return wave, flux, err
+
+
+def read_iraf_echell(fn):
+    """read the spectra file created by iraf package echell,
+    Caution: this is a temporary implementation, waiting for the
+    support from specutils
+
+    Args:
+        fn (fitname): fits name 
+
+    Returns:
+        [[wave, flux], [wave, flux],...]: A spectra list
+    """
+    from pyraf import iraf
+    import tempfile
+    tmpdir = tempfile.gettempdir()
+    hdul = fits.open(fn)
+    dim = hdul[0].data.shape[0]
+    iraf.onedspec()
+    outlst = []
+    for ind in range(1, dim+1):
+        inname = fn + '[*,%d]' % ind
+        basename, ext = os.path.splitext(fn)
+        name = ''.join([basename, str(ind), ext])
+        outname = os.sep.join([tmpdir, name])
+        outtxtname = os.path.splitext(outname)[0] + '.txt'
+        if not os.path.isfile(outname) or not os.path.isfile(outtxtname):
+            if os.path.isfile(outname):
+                os.remove(outname)
+            if os.path.isfile(outtxtname):
+                os.remove(outtxtname)
+            iraf.scopy(inname, outname)
+            iraf.wspectext(outname, outtxtname, header='No')
+        data = np.loadtxt(outtxtname)
+        wave = data[:, 0]
+        flux = data[:, 1]
+        arg = np.argsort(wave)
+        wave = wave[arg]
+        flux = flux[arg]
+        outlst.append([wave, flux])
+    return outlst
 
 
 def read_lte_spec(fn):
