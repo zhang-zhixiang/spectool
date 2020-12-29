@@ -145,6 +145,14 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
         velocity(float, km/s): the velocity of the spectrum compared with the template. Here positive value means red shift,
         negative value means blue shift.
     """
+    wl = max(wave[0], wave_ref[0])
+    wr = min(wave[-1], wave_ref[-1])
+    arg = np.where((wave<wr) & (wave>wl))
+    wave = wave[arg]
+    flux = flux[arg]
+    arg = np.where((wave_ref<wr) & (wave_ref>wl))
+    wave_ref = wave_ref[arg]
+    flux_ref = flux_ref[arg]
     c = 299792.458 # km/s
     logwave = np.log(wave)
     logwave_ref = np.log(wave_ref)
@@ -153,8 +161,8 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     logwend = max(logwave[-1], logwave_ref[-1])
     lognewave = np.arange(logwbegin, logwend, log_delta_w)
     newave = np.exp(lognewave)
-    newflux = np.array(rebin.rebin(wave, flux, newave))
-    newflux_ref = np.array(rebin.rebin(wave_ref, flux_ref, newave))
+    newflux = np.array(rebin.rebin_padvalue(wave, flux, newave))
+    newflux_ref = np.array(rebin.rebin_padvalue(wave_ref, flux_ref, newave))
     cont = spec_func.continuum(newave, newflux, maxiterations=1)
     cont_ref = spec_func.continuum(newave, newflux_ref, maxiterations=1)
     norm_cont = (cont - np.mean(cont)) / np.std(cont)
