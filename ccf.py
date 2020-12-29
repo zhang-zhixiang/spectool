@@ -225,8 +225,6 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
             yl, yr = ax1.get_ylim()
             xl, xr = newave[0], newave[-1]
             for win in maskwindow:
-                print('win[0], win[1] =', win[0], win[1])
-                print('xl, xr = ', xl, xr)
                 if (xl < win[0] and xr > win[0]) or (xl < win[1] and xr > win[1]):
                     ax1.fill_between(win, yl, yr, color='C7', alpha=0.3)
             ax1.set_ylim(yl, yr)
@@ -235,7 +233,7 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
         ax3.axvline(velocity, color='red', linestyle='--', label='vel = %.2f km/s' % velocity)
         ax3.axhline(rmax, color='C3', linestyle=':', label='rmax = %.2f' % rmax)
         ax3.legend()
-        plt.show()
+        fig.show()
     return velocity
 
 
