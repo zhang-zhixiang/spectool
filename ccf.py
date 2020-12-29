@@ -127,7 +127,7 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     return velocity
 
 
-def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0):
+def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0, maskwindow=None):
     """find the radial velocity using ccf method
 
     Args:
@@ -165,30 +165,72 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     newflux_ref = np.array(rebin.rebin_padvalue(wave_ref, flux_ref, newave))
     cont = spec_func.continuum(newave, newflux, maxiterations=1)
     cont_ref = spec_func.continuum(newave, newflux_ref, maxiterations=1)
+    if maskwindow is not None:
+        cont_old = cont.copy()
+        cont_ref_old = cont_ref.copy()
+        arg = spec_func.select_wave(newave, maskwindow)
+        print(arg)
+        cont[arg] = 1.0
+        cont_ref[arg] = 1.0
     norm_cont = (cont - np.mean(cont)) / np.std(cont)
     norm_cont_ref = (cont_ref - np.mean(cont_ref)) / np.std(cont_ref)
     shiftleft = int(math.floor(ccfleft / c / log_delta_w))
     shiftright = int(math.ceil(ccfright / c / log_delta_w))
     delta_shift = velocity_resolution / c / log_delta_w
-    shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
-    shiftlst = np.array(shiftlst)
-    rlst = np.array(rlst)
     shift, rmax = liblogccf.get_shift(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
     velocity = shift * log_delta_w * c
+    # if plot is True:
+    #     shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
+    #     shiftlst = np.array(shiftlst)
+    #     rlst = np.array(rlst)
+    #     arg = np.argsort(shiftlst)
+    #     shiftlst = shiftlst[arg]
+    #     rlst = rlst[arg]
+    #     velocitylst = shiftlst * log_delta_w * c
+    #     fig = plt.figure(figsize=(13, 4))
+    #     ax1 = fig.add_axes([0.05, 0.05+0.02, 0.6, 0.4])
+    #     ax2 = fig.add_axes([0.05, 0.53+0.02, 0.6, 0.4])
+    #     ax3 = fig.add_axes([0.68, 0.05+0.02, 0.28, 0.88])
+    #     # ax = fig.add_subplot(111)
+    #     ax1.plot(newave, cont, label='spec')
+    #     ax1.legend()
+    #     ax2.plot(newave, cont_ref, color='C1', label='template')
+    #     ax2.legend()
+    #     ax3.plot(velocitylst, rlst)
+    #     ax3.axvline(velocity, color='red', linestyle='--', label='vel = %.2f km/s' % velocity)
+    #     ax3.axhline(rmax, color='C3', linestyle=':', label='rmax = %.2f' % rmax)
+    #     ax3.legend()
+    #     plt.show()
     if plot is True:
+        shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
+        shiftlst = np.array(shiftlst)
+        rlst = np.array(rlst)
         arg = np.argsort(shiftlst)
         shiftlst = shiftlst[arg]
         rlst = rlst[arg]
         velocitylst = shiftlst * log_delta_w * c
         fig = plt.figure(figsize=(13, 4))
-        ax1 = fig.add_axes([0.05, 0.05+0.02, 0.6, 0.4])
-        ax2 = fig.add_axes([0.05, 0.53+0.02, 0.6, 0.4])
+        ax1 = fig.add_axes([0.05, 0.05+0.02, 0.6, 0.88])
+        # ax2 = fig.add_axes([0.05, 0.53+0.02, 0.6, 0.4])
         ax3 = fig.add_axes([0.68, 0.05+0.02, 0.28, 0.88])
         # ax = fig.add_subplot(111)
-        ax1.plot(newave, cont, label='spec')
-        ax1.legend()
-        ax2.plot(newave, cont_ref, color='C1', label='template')
-        ax2.legend()
+        if maskwindow is None:
+            ax1.plot(newave, cont, label='spec')
+            ax1.plot(newave, cont_ref, label='template')
+            ax1.legend()
+        else:
+            ax1.plot(newave, cont_old, label='spec')
+            ax1.plot(newave, cont_ref_old, label='template')
+            ax1.legend()
+            yl, yr = ax1.get_ylim()
+            xl, xr = newave[0], newave[-1]
+            for win in maskwindow:
+                print('win[0], win[1] =', win[0], win[1])
+                print('xl, xr = ', xl, xr)
+                if (xl < win[0] and xr > win[0]) or (xl < win[1] and xr > win[1]):
+                    ax1.fill_between(win, yl, yr, color='C7', alpha=0.3)
+            ax1.set_ylim(yl, yr)
+        # ax2.legend()
         ax3.plot(velocitylst, rlst)
         ax3.axvline(velocity, color='red', linestyle='--', label='vel = %.2f km/s' % velocity)
         ax3.axhline(rmax, color='C3', linestyle=':', label='rmax = %.2f' % rmax)
