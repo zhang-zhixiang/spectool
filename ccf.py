@@ -127,7 +127,7 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     return velocity
 
 
-def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0, maskwindow=None):
+def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0, maskwindow=None, returnrmax=False, fig=None):
     """find the radial velocity using ccf method
 
     Args:
@@ -140,6 +140,8 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
         ccfleft (int, optional): the left edge of ccf funtion, in the unit of km/s. Defaults to -800.
         ccfright (int, optional): the right edge of ccf function, in the unit of km/s. Defaults to 800.
         velocity_resolution (float, optional): the velocity resolution of ccf, in the unit of km/s. Defaults to 1.0.
+        returnrmax (bool, optional): whether return the Rmax, if set True, this function will return (velocity, rmax), default = False
+        fig (matplotlib.figure or None, optional): if plot = True and fig is not None, this function will plot the result in fig
 
     Returns:
         velocity(float, km/s): the velocity of the spectrum compared with the template. Here positive value means red shift,
@@ -209,7 +211,10 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
         shiftlst = shiftlst[arg]
         rlst = rlst[arg]
         velocitylst = shiftlst * log_delta_w * c
-        fig = plt.figure(figsize=(13, 4))
+        if fig is None:
+            fig = plt.figure(figsize=(13, 4))
+        else:
+            fig.clf()
         ax1 = fig.add_axes([0.05, 0.05+0.02, 0.6, 0.88])
         # ax2 = fig.add_axes([0.05, 0.53+0.02, 0.6, 0.4])
         ax3 = fig.add_axes([0.68, 0.05+0.02, 0.28, 0.88])
@@ -233,7 +238,11 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
         ax3.axvline(velocity, color='red', linestyle='--', label='vel = %.2f km/s' % velocity)
         ax3.axhline(rmax, color='C3', linestyle=':', label='rmax = %.2f' % rmax)
         ax3.legend()
-        fig.show()
+        # fig.canvas.draw()
+        # fig.canvas.flush_events()
+        # fig.show()
+    if returnrmax is True:
+        return velocity, rmax
     return velocity
 
 
