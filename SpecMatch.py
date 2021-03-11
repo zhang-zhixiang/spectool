@@ -69,6 +69,32 @@ class SpecTransform:
         An advice: if the flux is normalized before using, like flux = flux / np.median(flux),
         the scale par will be fited more easily. Or you can choose fit in log scale.
 
+        ------------------- a demo ------------------------
+        from lmfit import minimize
+        from spectool.SpecMatch import SpecTransform
+        import matplotlib.pyplot as plt
+
+        wave, flux, err = read_spec()
+        wave_t, flux_t = read_template()
+        unit1 = np.median(flux)
+        unit2 = np.median(flux_t)
+        flux = flux / unit1
+        err = err / unit1
+        flux_t = flux_t / unit2
+        spec_tf = SpecTransform(wave_t, flux_t)
+        pars = spec_tf.get_parameters()
+
+        def residual(params, x, data, eps_data):
+            model = spec_tf.get_flux(params, x)
+            return (data-model) / eps_data
+
+        out = minimize(residual, pars, args=(wave, flux, err))
+        flux_fit = spec_tf.get_flux(out.params, wave)
+        plt.plot(wave, flux, label='spec')
+        plt.plot(wave, flux_fit='template')
+        plt.show()
+        -----------------------------------------------------
+
 
         Args:
             wave (numpy.ndarray(float64)): spec wave (will be transformed)
