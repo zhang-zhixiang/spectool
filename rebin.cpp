@@ -185,12 +185,12 @@ PYBIND11_MODULE(rebin, m) {
 
   m.def("rebin", numpy_rebin,
         "rebin the input spectrum and ensure the input flux "
-        "conservation\ninput par: wave, flux, new_flux\nCaution: \nthe "
+        "conservation\ninput par: wave, flux, new_wave\nCaution: \nthe "
         "wavelength out of the spectrum is filled with 0, like this\n ..., 0, "
         "0, 0, f1, ..., fn, 0, 0, 0, ...");
   m.def("rebin_padvalue", numpy_rebin_padvalue,
         "rebin the input spectrum and ensure the input flux "
-        "conservation\ninput par: wave, flux, new_flux\nCaution: \nthe "
+        "conservation\ninput par: wave, flux, new_wave\nCaution: \nthe "
         "wavelength out of the spectrum is filled with the first and last "
         "value, like this\n ..., f1, f1, f1, f1, ..., fn, fn, fn, fn, ...");
   m.def("rebin_err", numpy_rebin_err,
