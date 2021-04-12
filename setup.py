@@ -1,7 +1,5 @@
 import os
-
 from setuptools import setup
-# import subprocess
 
 curdir = os.getcwd()
 sdir = os.path.dirname(os.path.abspath(__file__))
