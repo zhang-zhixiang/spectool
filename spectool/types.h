@@ -10,6 +10,8 @@ typedef const std::vector<double> CVEC;
 
 namespace py = pybind11;
 
+const double C_VAC = 299792458.0 / 1000; // the velocity of light in vacuum in the unit of km/s
+
 py::array_t<double> VEC2numpyarr(const std::vector<double>& vec);
 
 std::vector<double> numpyarr2VEC(const py::array_t<double>& input);

@@ -5,13 +5,16 @@
 #include <iostream>
 #include <numeric>
 #include <utility>
+#include <tuple>
+#include <deque>
 #include <vector>
 #include "pybind11/stl.h"
 #include "types.h"
+#include "rebin.h"
 
 // Please ensure -1 < arrx < 1
-ARR legendre_poly(const ARR& arrx, const ARR& arrpar) {
-  ARR arrresult(arrx.size());
+VEC legendre_poly(CVEC& arrx, CVEC& arrpar) {
+  VEC arrresult(arrx.size());
   for (auto& val : arrresult)
     val = 0;
   double* buff = new double[arrpar.size()];
@@ -27,8 +30,8 @@ ARR legendre_poly(const ARR& arrx, const ARR& arrpar) {
   return arrresult;
 }
 
-ARR poly(const ARR& arrx, const ARR& arrpar) {
-  ARR arrret(arrx.size());
+VEC poly(CVEC& arrx, CVEC& arrpar) {
+  VEC arrret(arrx.size());
   for (auto& val : arrret)
     val = 0;
   for (size_t ind = 0; ind < arrpar.size(); ++ind) {
@@ -44,8 +47,8 @@ ARR poly(const ARR& arrx, const ARR& arrpar) {
 
 // Dlambda = a0 + a1*lam + a2*lam^2 + a3*lam3 ...
 // return lambda + Dlambda
-ARR map_wave(const ARR& wave, const ARR& map_par) {
-  ARR new_wave = poly(wave, map_par);
+VEC map_wave(CVEC& wave, CVEC& map_par) {
+  VEC new_wave = poly(wave, map_par);
   for (size_t ind = 0; ind < new_wave.size(); ++ind)
     new_wave[ind] += wave[ind];
   return new_wave;
@@ -56,8 +59,8 @@ inline double gaussian(double x, double sigma, double x0) {
   return exp(-(x - x0) * (x - x0) / (2 * sigma * sigma));
 }
 
-ARR gaussian(const ARR& arrx, double sigma, double x0) {
-  ARR arrret(arrx.size());
+VEC gaussian(CVEC& arrx, double sigma, double x0) {
+  VEC arrret(arrx.size());
   for (size_t ind = 0; ind < arrx.size(); ++ind) {
     double x = arrx[ind];
     arrret[ind] = gaussian(x, sigma, x0);
@@ -65,10 +68,10 @@ ARR gaussian(const ARR& arrx, double sigma, double x0) {
   return arrret;
 }
 
-std::pair<int, int> gaussian2(const ARR& arrx,
+std::pair<int, int> gaussian2(CVEC& arrx,
                               double sigma,
                               double x0,
-                              ARR& result,
+                              VEC& result,
                               size_t index_ref,
                               double threshold_ratio) {
   // double x_ref = arrx[index_ref];
@@ -95,22 +98,22 @@ std::pair<int, int> gaussian2(const ARR& arrx,
   return std::make_pair(indl, indr);
 }
 
-ARR get_edge(const ARR& wave) {
-  ARR interval(wave.size());
+VEC _get_edge(CVEC& wave) {
+  VEC interval(wave.size());
   std::adjacent_difference(wave.begin(), wave.end(), interval.begin());
   interval[0] = interval[1];
   for (auto& val : interval)
     val *= 0.5;
-  ARR edge_out(wave.size() + 1);
+  VEC edge_out(wave.size() + 1);
   for (size_t ind = 0; ind < wave.size(); ++ind)
     edge_out[ind] = wave[ind] - interval[ind];
   edge_out.back() = wave.back() + interval.back();
   return edge_out;
 }
 
-ARR gauss_filter_mutable(const ARR& wave,
-                         const ARR& flux,
-                         const ARR& arrvelocity) {
+VEC gauss_filter_mutable(CVEC& wave,
+                         CVEC& flux,
+                         CVEC& arrvelocity) {
   const double c = 299792458.0 / 1000;
   const double sigma_l = arrvelocity.front() / 2.355 * wave.front() / c;
   const double sigma_r = arrvelocity.back() / 2.355 * wave.back() / c;
@@ -118,7 +121,7 @@ ARR gauss_filter_mutable(const ARR& wave,
   double delta_w2 = *(wave.rbegin()) - *(wave.rbegin() + 1);
   int left_margin = (int)(5 * sigma_l / delta_w1);
   int right_margin = (int)(5 * sigma_r / delta_w2);
-  ARR newave, newflux, arrsigma;
+  VEC newave, newflux, arrsigma;
   double wtmp = wave.front() - left_margin * delta_w1;
   for (int i = 0; i < left_margin; ++i) {
     newave.push_back(wtmp);
@@ -141,12 +144,12 @@ ARR gauss_filter_mutable(const ARR& wave,
     double sigma = arrvelocity.back() / 2.355 * wtmp / c;
     arrsigma.push_back(sigma);
   }
-  ARR gauss_profile(newave.size());
-  ARR new_flux(newave.size());
+  VEC gauss_profile(newave.size());
+  VEC new_flux(newave.size());
   for (auto& val : new_flux)
     val = 0;
-  ARR arredge = get_edge(newave);
-  ARR arrwidth;
+  VEC arredge = _get_edge(newave);
+  VEC arrwidth;
   for (size_t d = 0; d < arredge.size() - 1; ++d)
     arrwidth.push_back(arredge[d + 1] - arredge[d]);
   for (size_t ind = 0; ind < newave.size(); ++ind) {
@@ -165,17 +168,105 @@ ARR gauss_filter_mutable(const ARR& wave,
       gauss_profile[j] = 0;
     }
   }
-  ARR outflux;
+  VEC outflux;
   for (int i = left_margin; i < left_margin + wave.size(); ++i)
     outflux.push_back(new_flux[i]);
   return outflux;
 }
 
+VEC _get_width(CVEC& wave){
+  VEC out(wave.size());
+  for(int ind = 1; ind < wave.size() - 1; ++ind){
+    out[ind] = (wave[ind+1] - wave[ind-1]) / 2.0;
+  }
+  out[0] = wave[1] - wave[0];
+  const int last = wave.size() - 1;
+  out[last] = wave[last] - wave[last-1];
+  return out;
+}
+
+void inline to_zero(VEC & arr){
+  for(auto & val : arr)
+    val = 0;
+}
+
+void inline vel_to_lambda(CVEC & velocity, const double w, VEC & lambda_arr){
+  for(int ind = 0; ind < velocity.size(); ++ind){
+    double myvel = velocity[ind];
+    double delta_w = myvel / C_VAC * w;
+    lambda_arr[ind] = w + delta_w;
+  }
+}
+
+template<typename IT, typename IT2>
+double inline _sum_flux(IT iflux, IT iflux_end, IT2 iwidth){
+  double out = 0;
+  while (iflux != iflux_end)
+  {
+    out += *(iflux++) * (*(iwidth++));
+  }
+  return out;
+}
+
+auto add_margin(CVEC& wave, CVEC& flux, CVEC& velocity){
+  const double delta_w = (wave.back() - wave.front()) / wave.size();
+  const double vl = velocity.front();
+  const double vr = velocity.back();
+  const double delta_wl = 3 * vl / C_VAC * wave.front();
+  const double delta_wr = 3 * vr / C_VAC * wave.back();
+  double wl = wave.front() + delta_wl;
+  double wr = wave.back() + delta_wr;
+  if(wl < 0){
+    double siz = std::ceil(-wl/delta_w) + 1;
+    wl += siz * delta_w;
+  }
+  std::deque<double> new_wave(wave.begin(), wave.end());
+  std::deque<double> new_flux(flux.begin(), flux.end());
+  int left_margin = 0;
+  while(new_wave.front() > wl){
+    left_margin++;
+    new_wave.push_front(new_wave.front() - delta_w);
+    new_flux.push_front(new_flux.front());
+  }
+  while(new_wave.back() < wr){
+    new_wave.push_back(new_wave.back() + delta_w);
+    new_flux.push_back(new_flux.back());
+  }
+  VEC out_wave(new_wave.begin(), new_wave.end());
+  VEC out_flux(new_flux.begin(), new_flux.end());
+  return std::make_tuple(out_wave, out_flux, left_margin);
+}
+
+VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profile){
+  auto [new_wave, new_flux, left_margin] = add_margin(wave, flux, velocity);
+  VEC out(new_flux.size());
+  VEC lambda_arr(velocity.size());
+  CVEC width_VEC = _get_width(new_wave);
+  to_zero(out);
+  for(int ind=0; ind< new_wave.size(); ++ind){
+    double w = new_wave[ind];
+    vel_to_lambda(velocity, w, lambda_arr);
+    VEC outprofile = rebin(lambda_arr, profile, new_wave);
+    double sumflux = _sum_flux(outprofile.begin(), outprofile.end(), width_VEC.begin());
+    if (sumflux == 0){
+      out[ind] = new_flux[ind];
+    } else {
+      double intflux = width_VEC[ind] * new_flux[ind];
+      for(auto & val : outprofile) val *= intflux/sumflux;
+      for(int j = 0; j < out.size(); ++j) out[j] += outprofile[j];
+    }
+  }
+  auto from = out.begin() + left_margin;
+  auto end = from + wave.size();
+  VEC new_out(from, end);
+  return new_out;
+}
+
 // a gaussian filter for spectrum, the sigma of gaussians can be different in
 // different wave, the sigma is defined as sigma = par0 + par1*wave +
 // par2*wave^2 ... return the fluxes after smooth
-ARR gauss_filter(const ARR& wave, const ARR& flux, const ARR& arrpar) {
-  ARR arrsigma = poly(wave, arrpar);
+VEC gauss_filter(CVEC& wave, CVEC& flux, CVEC& arrpar) {
+  VEC arrsigma = poly(wave, arrpar);
   // adjust for boundry condition
   auto left_sigma = arrsigma.front();
   auto right_sigma = arrsigma.back();
@@ -183,7 +274,7 @@ ARR gauss_filter(const ARR& wave, const ARR& flux, const ARR& arrpar) {
   double delta_w2 = *(wave.rbegin()) - *(wave.rbegin() + 1);
   int left_margin = (int)(5 * left_sigma / delta_w1);
   int right_margin = (int)(5 * right_sigma / delta_w2);
-  ARR newave, newflux;
+  VEC newave, newflux;
   double wtmp = wave.front() - left_margin * delta_w1;
   for (int i = 0; i < left_margin; ++i) {
     newave.push_back(wtmp);
@@ -202,12 +293,12 @@ ARR gauss_filter(const ARR& wave, const ARR& flux, const ARR& arrpar) {
   }
 
   arrsigma = poly(newave, arrpar);
-  ARR gauss_profile(newave.size());
-  ARR new_flux(newave.size());
+  VEC gauss_profile(newave.size());
+  VEC new_flux(newave.size());
   for (auto& val : new_flux)
     val = 0;
-  ARR arredge = get_edge(newave);
-  ARR arrwidth;
+  VEC arredge = _get_edge(newave);
+  VEC arrwidth;
   for (size_t d = 0; d < arredge.size() - 1; ++d)
     arrwidth.push_back(arredge[d + 1] - arredge[d]);
   for (size_t ind = 0; ind < newave.size(); ++ind) {
@@ -226,26 +317,33 @@ ARR gauss_filter(const ARR& wave, const ARR& flux, const ARR& arrpar) {
       gauss_profile[j] = 0;
     }
   }
-  ARR outflux;
+  VEC outflux;
   for (int i = left_margin; i < left_margin + wave.size(); ++i)
     outflux.push_back(new_flux[i]);
   return outflux;
 }
 
-py::array_t<double> numpy_gauss_filter(const ARR& wave,
-                                       const ARR& flux,
-                                       const ARR& arrpar) {
+py::array_t<double> numpy_gauss_filter(CVEC& wave,
+                                       CVEC& flux,
+                                       CVEC& arrpar) {
   return VEC2numpyarr(gauss_filter(wave, flux, arrpar));
 }
 
-py::array_t<double> numpy_gauss_filter_mutable(const ARR& wave,
-                                               const ARR& flux,
-                                               const ARR& arrvelocity) {
+py::array_t<double> numpy_gauss_filter_mutable(CVEC& wave,
+                                               CVEC& flux,
+                                               CVEC& arrvelocity) {
   return VEC2numpyarr(gauss_filter_mutable(wave, flux, arrvelocity));
 }
 
-py::array_t<double> numpy_legendre_poly(const ARR& arrx, const ARR& arrpar) {
+py::array_t<double> numpy_legendre_poly(CVEC& arrx, CVEC& arrpar) {
   return VEC2numpyarr(legendre_poly(arrx, arrpar));
+}
+
+py::array_t<double> numpy_filter_use_given_profile(CVEC& wave,
+                                                   CVEC& flux,
+                                                   CVEC& velocity,
+                                                   CVEC& profile){
+  return VEC2numpyarr(filter_use_given_profile(wave, flux, velocity, profile));
 }
 
 PYBIND11_MODULE(convol, m) {
@@ -259,4 +357,12 @@ PYBIND11_MODULE(convol, m) {
   m.def("legendre_poly", numpy_legendre_poly,
         "legendre polynomial function\ninput par: arrx, arrpar\nCaution: "
         "Please ensure -1 < arrx < 1!");
+  m.def("filter_use_given_profile", numpy_filter_use_given_profile,
+        "Smooth the input spectrum using the given kernel\n"
+        "input par\n"
+        "wave(numpy.ndarray): the wavelength of the spectrum\n"
+        "flux(numpy.ndarray): the flux of spectrum\n"
+        "velocity(numpy.ndarray): the velocity of the convolution kernel(in the unit of km/s)\n"
+        "profile(numpy.darray): the profile of the convolution kernel"
+        );
 }

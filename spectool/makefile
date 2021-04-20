@@ -23,8 +23,8 @@ libspecfunc = libspecfunc$(suffix)
 
 default : $(libconvol) $(librebin) $(libccf) $(liblogccf) $(libspecfunc)
 
-$(libconvol) : convol.cpp types.cpp
-	$(CC) convol.cpp types.cpp -o $(libconvol) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(GSL)
+$(libconvol) : convol.cpp types.cpp rebin.cpp
+	$(CC) convol.cpp types.cpp rebin.cpp -o $(libconvol) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(GSL)
 
 $(librebin) : rebin.cpp types.cpp
 	$(CC) rebin.cpp types.cpp -o $(librebin) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11)
