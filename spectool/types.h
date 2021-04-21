@@ -7,6 +7,7 @@
 
 typedef std::vector<double> VEC;
 typedef const std::vector<double> CVEC;
+typedef std::vector<double>::iterator VEC_ITR;
 
 namespace py = pybind11;
 

@@ -1,5 +1,6 @@
 #include "convol.h"
 #include <gsl/gsl_sf_legendre.h>
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -237,8 +238,64 @@ auto add_margin(CVEC& wave, CVEC& flux, CVEC& velocity){
   return std::make_tuple(out_wave, out_flux, left_margin);
 }
 
+auto get_int_profile(CVEC& wave, CVEC& flux){
+  VEC out_wave(flux.size()+1);
+  for(int ind = 0; ind < wave.size(); ++ind) out_wave[ind+1] = wave[ind];
+  out_wave[0] = 2*wave[0] - wave[1];
+  VEC out_flux(flux.size()+1);
+  out_flux[0] = 0;
+  for(int ind = 0; ind < flux.size(); ++ind) out_flux[ind+1] = (out_wave[ind+1] - out_wave[ind]) * flux[ind];
+  for(int ind = 1; ind < out_flux.size(); ++ind) out_flux[ind] += out_flux[ind-1];
+  return std::make_tuple(out_wave, out_flux);
+}
+
+void rebin_special(CVEC& wave, CVEC& intflux, CVEC& new_wave, VEC& new_flux){
+  auto new_from = lower_bound(new_wave.begin(), new_wave.end(), wave.front());
+  if (new_from != new_wave.begin()) new_from--;
+  const int myfirst = new_from - wave.begin();
+  auto new_end = upper_bound(new_wave.begin(), new_wave.end(), wave.back());
+  const int myend = new_end - wave.begin();
+  auto iw = wave.begin();
+  auto iff = intflux.begin();
+  for(int ind = myfirst; ind != myend; ++ind){
+    if(new_wave[ind] < wave[0]) new_flux[ind] = 0;
+    else if (new_wave[ind] >= wave.back()) new_flux[ind] = intflux.back();
+    else{
+      while(*(iw+1) < new_wave[ind]) {iw++; iff++;}
+      double slope = (*(iff+1) - *iff) / (*(iw+1) - *iw);
+      double length = new_wave[ind] - *iw;
+      double tmpflux = *iff + slope*length;
+      new_flux[ind] = tmpflux;
+    }
+  }
+    
+  double first_width = new_wave[myfirst+1] - new_wave[0];
+  double left_edge = new_wave[0] - first_width;
+  double left_flux;
+  if(left_edge < wave[0]) left_flux = 0;
+  else if (left_edge >= wave.back()) left_flux = intflux.back();
+  else{
+    auto myfrom = lower_bound(wave.begin(), wave.end(), left_edge);
+    int ss = myfrom - wave.begin();
+    double slop = (intflux[ss+1] - intflux[ss]) / (wave[ss+1] - wave[ss]);
+    double length = left_edge - wave[ss];
+    left_flux = intflux[ss] + slop * length;
+  }
+  auto new_iw = new_wave.end() - 1;
+  for(auto itr = new_flux.end()-1; itr != new_flux.begin(); --itr){
+    *itr -= *(itr-1);
+    double width = *new_iw - *(new_iw - 1);
+    *itr /= width;
+    new_iw--;
+  }
+  double 
+}
+
 VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profile){
   auto [new_wave, new_flux, left_margin] = add_margin(wave, flux, velocity);
+  new_wave = wave;
+  new_flux = flux;
+  left_margin = 0;
   VEC out(new_flux.size());
   VEC lambda_arr(velocity.size());
   CVEC width_VEC = _get_width(new_wave);
