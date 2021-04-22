@@ -1,10 +1,10 @@
 detected_OS := $(shell uname)
 
 ifeq ($(detected_OS), Linux)
-	FLAG = -fPIC -std=c++17 -O2
+	FLAG = -fPIC -std=c++17 -O3
 	CC = g++
 else
-	FLAG = -fPIC -std=c++17 -O2 -Wall -undefined dynamic_lookup
+	FLAG = -fPIC -std=c++17 -O3 -Wall -undefined dynamic_lookup
 	CC = clang++
 endif
 

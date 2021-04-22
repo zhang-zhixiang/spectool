@@ -359,9 +359,7 @@ VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profi
     auto [ind_begin, ind_end] = rebin_special(lambda_arr, intflux, new_wave, outprofile);
     // std::cout << "flag 2" << std::endl;
     double sumflux = _sum_flux(outprofile.begin()+ind_begin, outprofile.begin()+ind_end, width_VEC.begin()+ind_begin);
-    if (sumflux == 0){
-      out[ind] = new_flux[ind];
-    } else {
+    if (sumflux != 0){
       double intflux = width_VEC[ind] * new_flux[ind];
       for(int ind_tmp = ind_begin; ind_tmp < ind_end; ++ind_tmp) outprofile[ind_tmp] *= intflux/sumflux;
       for(int ind_tmp = ind_begin; ind_tmp < ind_end; ++ind_tmp) out[ind_tmp] += outprofile[ind_tmp];
