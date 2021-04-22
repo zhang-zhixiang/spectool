@@ -11,7 +11,7 @@
 #include <vector>
 #include "pybind11/stl.h"
 #include "types.h"
-#include "rebin.h"
+// #include "rebin.h"
 
 // Please ensure -1 < arrx < 1
 VEC legendre_poly(CVEC& arrx, CVEC& arrpar) {
@@ -249,68 +249,122 @@ auto get_int_profile(CVEC& wave, CVEC& flux){
   return std::make_tuple(out_wave, out_flux);
 }
 
-void rebin_special(CVEC& wave, CVEC& intflux, CVEC& new_wave, VEC& new_flux){
-  auto new_from = lower_bound(new_wave.begin(), new_wave.end(), wave.front());
-  if (new_from != new_wave.begin()) new_from--;
-  const int myfirst = new_from - wave.begin();
-  auto new_end = upper_bound(new_wave.begin(), new_wave.end(), wave.back());
-  const int myend = new_end - wave.begin();
-  auto iw = wave.begin();
-  auto iff = intflux.begin();
-  for(int ind = myfirst; ind != myend; ++ind){
-    if(new_wave[ind] < wave[0]) new_flux[ind] = 0;
-    else if (new_wave[ind] >= wave.back()) new_flux[ind] = intflux.back();
-    else{
-      while(*(iw+1) < new_wave[ind]) {iw++; iff++;}
-      double slope = (*(iff+1) - *iff) / (*(iw+1) - *iw);
-      double length = new_wave[ind] - *iw;
-      double tmpflux = *iff + slope*length;
-      new_flux[ind] = tmpflux;
-    }
-  }
-    
-  double first_width = new_wave[myfirst+1] - new_wave[0];
-  double left_edge = new_wave[0] - first_width;
+// template<typename IT>
+// void print(IT first, IT end){
+//   for (auto it = first; it != end; ++it)
+//     std::cout << *it << " ";
+//   std::cout << std::endl;
+// }
+
+template<typename IT1, typename IT2>
+void myinterp(IT1 iw1, IT1 if1, int size1, IT1 iw2, IT2 if2, int size2){
+  auto iw1_end = iw1 + size1;
+  auto if1_end = if1 + size1;
+  auto iw2_end = iw2 + size2;
+  auto if2_end = if2 + size2;
+
+  // print(iw1, iw1_end);
+  // std::cout << "size1 = " << size1 << std::endl;
+  // print(if1, if1_end);
+  // std::cout << "size2 = " << size2 << std::endl;
+
+  const double w1_first = iw1[0];
+  const double w1_last = iw1[size1-1];
+  const double f1_first = if1[0];
+  const double f1_last = if1[size1-1];
+
+  const double left_width = iw2[1] - iw2[0];
+  const double left_edge = iw2[0] - left_width;
   double left_flux;
-  if(left_edge < wave[0]) left_flux = 0;
-  else if (left_edge >= wave.back()) left_flux = intflux.back();
+  if(left_edge < *iw1) left_flux = 0;
+  else if (left_edge >= w1_last) left_flux = f1_last;
   else{
-    auto myfrom = lower_bound(wave.begin(), wave.end(), left_edge);
-    int ss = myfrom - wave.begin();
-    double slop = (intflux[ss+1] - intflux[ss]) / (wave[ss+1] - wave[ss]);
-    double length = left_edge - wave[ss];
-    left_flux = intflux[ss] + slop * length;
+    auto myfrom = lower_bound(iw1, iw1_end, left_edge);
+    int ss = myfrom - iw1;
+    double slop = (if1[ss+1] - if1[ss]) / (iw1[ss+1] - iw1[ss]);
+    double length = left_edge - iw1[ss];
+    left_flux = if1[ss] + slop * length;
   }
-  auto new_iw = new_wave.end() - 1;
-  for(auto itr = new_flux.end()-1; itr != new_flux.begin(); --itr){
+
+  int ind = 0;
+  auto iw = iw1;
+  auto iff = if1;
+  // std::cout << "flag 3" << std::endl;
+  while(iw2[ind] < w1_first && ind < size2) if2[ind++] = 0;
+  while(iw2[ind] < w1_last && ind < size2){
+    while(*(iw+1) < iw2[ind]) {iw++; iff++;}
+    double slope = (*(iff+1) - *iff) / (*(iw+1) - *iw);
+    double length = iw2[ind] - *iw;
+    double tmpflux = *iff + slope*length;
+    if2[ind] = tmpflux;
+    ind++;
+  }
+  while(ind < size2) if2[ind++] = f1_last;
+
+  // std::cout << "flag 4" << std::endl;
+
+  auto new_iw = iw2_end - 1;
+  for(auto itr = if2_end - 1; itr != if2; --itr){
     *itr -= *(itr-1);
     double width = *new_iw - *(new_iw - 1);
+    // std::cout << "width = " << width << std::endl;
     *itr /= width;
     new_iw--;
   }
-  double 
+  if2[0] -= left_flux;
+  if2[0] /= left_width;
+  // std::cout << "end flag" << std::endl;
+}
+
+void print(CVEC& arr){
+  for (auto val : arr){
+    std::cout << val << " ";
+  }
+  std::cout << std::endl;
+}
+
+auto rebin_special(CVEC& wave, CVEC& intflux, CVEC& new_wave, VEC& new_flux){
+  auto iw1 = wave.begin();
+  auto if1 = intflux.begin();
+  int size1 = wave.size();
+  auto iw2 = lower_bound(new_wave.begin(), new_wave.end(), wave.front());
+  auto iw2_end = upper_bound(new_wave.begin(), new_wave.end(), wave.back());
+  int size2 = iw2_end - iw2;
+  int first_num = iw2 - new_wave.begin();
+  auto if2 = new_flux.begin() + first_num;
+  // std::cout << "first_num = " << first_num << " first_num+size2 = " << first_num+size2 <<std::endl;
+  myinterp(iw1, if1, size1, iw2, if2, size2);
+  return std::make_tuple(first_num, first_num+size2);
 }
 
 VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profile){
   auto [new_wave, new_flux, left_margin] = add_margin(wave, flux, velocity);
-  new_wave = wave;
-  new_flux = flux;
-  left_margin = 0;
+  // print(new_wave);
+  // print(new_flux);
+  auto [velocity_wle, intflux] = get_int_profile(velocity, profile);
+  // new_wave = wave;
+  // new_flux = flux;
+  // left_margin = 0;
   VEC out(new_flux.size());
-  VEC lambda_arr(velocity.size());
+  VEC outprofile(new_flux.size());
+  VEC lambda_arr(velocity_wle.size());
   CVEC width_VEC = _get_width(new_wave);
   to_zero(out);
+
   for(int ind=0; ind< new_wave.size(); ++ind){
     double w = new_wave[ind];
-    vel_to_lambda(velocity, w, lambda_arr);
-    VEC outprofile = rebin(lambda_arr, profile, new_wave);
-    double sumflux = _sum_flux(outprofile.begin(), outprofile.end(), width_VEC.begin());
+    vel_to_lambda(velocity_wle, w, lambda_arr);
+    // VEC outprofile = rebin(lambda_arr, profile, new_wave);
+    // std::cout << "flag 1" << std::endl;
+    auto [ind_begin, ind_end] = rebin_special(lambda_arr, intflux, new_wave, outprofile);
+    // std::cout << "flag 2" << std::endl;
+    double sumflux = _sum_flux(outprofile.begin()+ind_begin, outprofile.begin()+ind_end, width_VEC.begin()+ind_begin);
     if (sumflux == 0){
       out[ind] = new_flux[ind];
     } else {
       double intflux = width_VEC[ind] * new_flux[ind];
-      for(auto & val : outprofile) val *= intflux/sumflux;
-      for(int j = 0; j < out.size(); ++j) out[j] += outprofile[j];
+      for(int ind_tmp = ind_begin; ind_tmp < ind_end; ++ind_tmp) outprofile[ind_tmp] *= intflux/sumflux;
+      for(int ind_tmp = ind_begin; ind_tmp < ind_end; ++ind_tmp) out[ind_tmp] += outprofile[ind_tmp];
     }
   }
   auto from = out.begin() + left_margin;
@@ -318,6 +372,34 @@ VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profi
   VEC new_out(from, end);
   return new_out;
 }
+
+// VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profile){
+//   auto [new_wave, new_flux, left_margin] = add_margin(wave, flux, velocity);
+//   // new_wave = wave;
+//   // new_flux = flux;
+//   // left_margin = 0;
+//   VEC out(new_flux.size());
+//   VEC lambda_arr(velocity.size());
+//   CVEC width_VEC = _get_width(new_wave);
+//   to_zero(out);
+//   for(int ind=0; ind< new_wave.size(); ++ind){
+//     double w = new_wave[ind];
+//     vel_to_lambda(velocity, w, lambda_arr);
+//     VEC outprofile = rebin(lambda_arr, profile, new_wave);
+//     double sumflux = _sum_flux(outprofile.begin(), outprofile.end(), width_VEC.begin());
+//     if (sumflux == 0){
+//       out[ind] = new_flux[ind];
+//     } else {
+//       double intflux = width_VEC[ind] * new_flux[ind];
+//       for(auto & val : outprofile) val *= intflux/sumflux;
+//       for(int j = 0; j < out.size(); ++j) out[j] += outprofile[j];
+//     }
+//   }
+//   auto from = out.begin() + left_margin;
+//   auto end = from + wave.size();
+//   VEC new_out(from, end);
+//   return new_out;
+// }
 
 // a gaussian filter for spectrum, the sigma of gaussians can be different in
 // different wave, the sigma is defined as sigma = par0 + par1*wave +

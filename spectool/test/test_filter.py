@@ -8,7 +8,7 @@ import tqdm
 
 
 def main():
-    wave = np.arange(3000, 8000, 1.2)
+    wave = np.arange(3000, 8000, 1.1)
     # flux = np.ones(wave.shape)
     flux = np.zeros(wave.shape)
     flux[800] = 123
@@ -25,7 +25,7 @@ def main():
 
 def main3():
     wave = np.arange(3000, 6000, 1.2)
-    velocity = np.arange(-4000, 4000, 30.0)
+    velocity = np.arange(-4000, 4000, 100.0)
     profile = np.zeros(velocity.shape)
     arg = np.where((velocity>-2000) & (velocity<2000))
     profile[arg] = 1.0
@@ -61,12 +61,12 @@ def main2():
     plt.figure()
     plt.step(wave, flux)
     plt.step(wave, outflux, label='rect')
-    plt.plot(wave, out_flux2, label='gaussian')
+    plt.step(wave, out_flux2, label='gaussian')
     plt.legend()
     plt.show()
 
 
 if __name__ == '__main__':
-    # main()
-    # main2()
+    main()
+    main2()
     main3()
