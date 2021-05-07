@@ -9,6 +9,7 @@ from collections import OrderedDict
 from astropy.io import fits
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 from ..spec_func import continuum
 from .. import ccf
 
