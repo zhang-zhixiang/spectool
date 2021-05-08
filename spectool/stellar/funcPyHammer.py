@@ -411,6 +411,121 @@ class Spectrum(object):
         else:
             return False, np.nan
 
+
+    def guessSpecType_single_star(self):
+    
+        # Measure lines
+        self._lines = self.measureLines()
+
+        # Recast values to simple 2D array
+        lines = np.array(list(self._lines.values()))[np.argsort(list(self._lines.keys()))]
+
+        # Weight by uncertainty in object lines and template lines
+        weights = 1 / (np.sqrt(self._tempLineVars) + np.sqrt(lines[:,1]))
+
+        # Find best fit
+        sumOfWeights = np.nansum(weights**2, 1)
+        sumOfWeights[sumOfWeights == 0] = np.nan
+        self.FULLdistance = np.nansum(((lines[:,0] - self._tempLineAvgs) * weights)**2, 1) / sumOfWeights
+        if np.all(np.isnan(self.FULLdistance)):
+            iguess = None
+            #Save guess as dict       
+            self._guess = {'specType':   -1, # Spectral type, 0 for O to 7 for L
+                           'subType':    -1, # Spectral subtype
+                           'metal':      -1, # Metallicity
+                           'luminosity': -1} # Luminosity class, 3 for giant, 5 for MS   
+        else:
+            while True:
+                iguess = np.nanargmin(self.FULLdistance)
+                if np.isin(np.int(self._tempLines[0][iguess]), np.array([0, 1, 2, 3])):
+                    try:
+                        isThisAWD, thisSigma = self.isWD()
+                        if isThisAWD:
+                            WD_sigma = np.array([18.51, 24.16, 30.58, 26.81, 35.11, 43.17, 38.74, 22.22, 15.18, 10.07])
+                            # WD_sigma_label = np.array([1,2,3,4,5,6,7])
+                            self._guess = {'specType':   9, # Spectral type, 0 for O to 7 for L, 8 = C, 9 = WD
+                                        'subType':    np.float64(self.subTypeWD[np.argmin(np.abs(WD_sigma-thisSigma))]), # Spectral subtype
+                                        'metal':      0, # Metallicity
+                                        'luminosity': 5} # Luminosity class, 3 for giant, 5 for MS   
+                        else:
+                            self._guess = {'specType':   np.int(self._tempLines[0][iguess]), # Spectral type, 0 for O to 7 for L, 8 = C, 9 = WD
+                                        'subType':    np.int(self._tempLines[1][iguess]), # Spectral subtype
+                                        'metal':      self._tempLines[2][iguess], # Metallicity
+                                        'luminosity': np.int(self._tempLines[3][iguess])} # Luminosity class, 3 for giant, 5 for MS  
+                    except RuntimeError:
+                        stillWD = True
+                        stillWD_step = 1
+                        while stillWD:
+                            iguess_dist = np.partition(self.FULLdistance, stillWD_step)[stillWD_step]
+                            iguess = np.where(self.FULLdistance == iguess_dist)[0][0]
+                            if np.int(self._tempLines[0][iguess]) == 9:
+                                stillWD_step += 1
+                            else:
+                                stillWD = False
+                                stillWD_step += 1
+
+                elif np.int(self._tempLines[0][iguess]) == 9: 
+                    try:
+                        isThisAWD, thisSigma = self.isWD()
+                        if isThisAWD:
+                            self._guess = {'specType':   np.int(self._tempLines[0][iguess]), # Spectral type, 0 for O to 7 for L, 8 = C, 9 = WD
+                                        'subType':    self._tempLines[1][iguess], # Spectral subtype
+                                        'metal':      self._tempLines[2][iguess], # Metallicity
+                                        'luminosity': np.int(self._tempLines[3][iguess])} # Luminosity class, 3 for giant, 5 for MS  
+                        else:
+                            stillWD = True
+                            stillWD_step = 1
+                            while stillWD:
+                                iguess_dist = np.partition(self.FULLdistance, stillWD_step)[stillWD_step]
+                                iguess = np.where(self.FULLdistance == iguess_dist)[0][0]
+                                if np.int(self._tempLines[0][iguess]) == 9:
+                                    stillWD_step += 1
+                                else:
+                                    stillWD = False
+                                    stillWD_step += 1
+
+                            self._guess = {'specType':   np.int(self._tempLines[0][iguess]), # Spectral type, 0 for O to 7 for L, 8 = C, 9 = WD
+                                        'subType':    np.int(self._tempLines[1][iguess]), # Spectral subtype
+                                        'metal':      self._tempLines[2][iguess], # Metallicity
+                                        'luminosity': np.int(self._tempLines[3][iguess])} # Luminosity class, 3 for giant, 5 for MS 
+                    except RuntimeError:
+                        stillWD = True
+                        stillWD_step = 1
+                        while stillWD:
+                            iguess_dist = np.partition(self.FULLdistance, stillWD_step)[stillWD_step]
+                            iguess = np.where(self.FULLdistance == iguess_dist)[0][0]
+                            if np.int(self._tempLines[0][iguess]) == 9:
+                                stillWD_step += 1
+                            else:
+                                stillWD = False
+                                stillWD_step += 1                     
+                elif np.int(self._tempLines[0][iguess]) == 8:
+                    # Save guess as dict       
+                    self._guess = {'specType':   np.int(self._tempLines[0][iguess]), # Spectral type, 0 for O to 7 for L, 8 = C, 9 = WD
+                                'subType':    self.subTypeC[int(self._tempLines[1][iguess])], # Spectral subtype
+                                'metal':      self._tempLines[2][iguess], # Metallicity
+                                'luminosity': np.int(self._tempLines[3][iguess])} # Luminosity class, 3 for giant, 5 for MS
+                else: 
+                    # Save guess as dict       
+                    self._guess = {'specType':   np.int(self._tempLines[0][iguess]), # Spectral type, 0 for O to 7 for L, 8 = C, 9 = WD
+                                'subType':    np.int(self._tempLines[1][iguess]), # Spectral subtype
+                                'metal':      self._tempLines[2][iguess], # Metallicity
+                                'luminosity': np.int(self._tempLines[3][iguess])} # Luminosity class, 3 for giant, 5 for MS
+                if self.guess['specType'] >= 10:
+                    iguess = np.nanargmin(self.FULLdistance)
+                    maxvalue = np.max(self.FULLdistance)
+                    self.FULLdistance[iguess] = maxvalue
+                else:
+                    break
+
+        if self.guess['specType'] >= 10:
+            self._isSB2 = True
+            self.distance = self.FULLdistance[iguess]
+        else:
+            self._isSB2 = False
+            self.distance = self.FULLdistance[iguess]
+
+
     def guessSpecType(self):
     
         # Measure lines
@@ -516,6 +631,22 @@ class Spectrum(object):
         else:
             self._isSB2 = False
             self.distance = self.FULLdistance[iguess]
+
+    def get_teff(self):
+        if not hasattr(self, '_type_teff'):
+            path = os.path.abspath(__file__)
+            dirpath = os.path.dirname(path)
+            fname = os.sep.join([dirpath, 'stellar_info.txt'])
+            lst = [i.split() for i in open(fname)]
+            type_teff_pair = [[i[0], float(i[1])] for i in lst]
+            self._type_teff = dict(type_teff_pair)
+        tempname = self.getFullTempName()
+        basename = os.path.basename(tempname)
+        spectype = basename.split('_')[0]
+        if spectype in self._type_teff:
+            return self._type_teff[spectype]
+        else:
+            return None
 
     def getFullTempName(self):
         bestGuess = self._guess
