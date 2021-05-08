@@ -9,14 +9,16 @@ import tqdm
 
 def main():
     wave = np.arange(3000, 8000, 1.1)
-    # flux = np.ones(wave.shape)
-    flux = np.zeros(wave.shape)
+    flux = np.ones(wave.shape)
+    # flux = np.zeros(wave.shape)
     flux[800] = 123
     flux[2500] = 99
     velocity = np.arange(-4000, 4000, 10.0)
     profile = np.zeros(velocity.shape)
-    arg = np.where((velocity>-2000) & (velocity<2000))
-    profile[arg] = 1.0
+    velocity = [-2001, -2000.0, 2000.0, 2001]
+    profile = [0,1.,1.,0]
+    # arg = np.where((velocity>-2000) & (velocity<2000))
+    # profile[arg] = 1.0
     outflux = convol.filter_use_given_profile(wave, flux, velocity, profile)
     plt.step(wave, flux)
     plt.step(wave, outflux)
@@ -26,9 +28,11 @@ def main():
 def main3():
     wave = np.arange(3000, 6000, 1.2)
     velocity = np.arange(-4000, 4000, 100.0)
-    profile = np.zeros(velocity.shape)
-    arg = np.where((velocity>-2000) & (velocity<2000))
-    profile[arg] = 1.0
+    velocity = [-2001, -2000.0, 2000.0, 2001]
+    profile = [0,1.,1.,0]
+    # profile = np.zeros(velocity.shape)
+    # arg = np.where((velocity>-2000) & (velocity<2000))
+    # profile[arg] = 1.0
     sumflux = np.zeros(wave.shape)
     for ind in tqdm.tqdm(range(len(wave))):
         flux = np.zeros(wave.shape)
@@ -67,6 +71,6 @@ def main2():
 
 
 if __name__ == '__main__':
-    # main()
+    main()
     # main2()
     main3()

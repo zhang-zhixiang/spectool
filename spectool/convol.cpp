@@ -316,12 +316,12 @@ void myinterp(IT1 iw1, IT1 if1, int size1, IT1 iw2, IT2 if2, int size2){
   // std::cout << "end flag" << std::endl;
 }
 
-void print(CVEC& arr){
-  for (auto val : arr){
-    std::cout << val << " ";
-  }
-  std::cout << std::endl;
-}
+// void print(CVEC& arr){
+//   for (auto val : arr){
+//     std::cout << val << " ";
+//   }
+//   std::cout << std::endl;
+// }
 
 auto rebin_special(CVEC& wave, CVEC& intflux, CVEC& new_wave, VEC& new_flux){
   auto iw1 = wave.begin();
