@@ -632,7 +632,7 @@ class Spectrum(object):
             self._isSB2 = False
             self.distance = self.FULLdistance[iguess]
 
-    def get_teff(self):
+    def getTeff(self):
         if not hasattr(self, '_type_teff'):
             path = os.path.abspath(__file__)
             dirpath = os.path.dirname(path)
