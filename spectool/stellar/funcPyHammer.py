@@ -646,7 +646,7 @@ class Spectrum(object):
         if spectype in self._type_teff:
             return self._type_teff[spectype]
         else:
-            return None
+            return np.nan
 
     def getFullTempName(self):
         bestGuess = self._guess
