@@ -1,3 +1,4 @@
+from typing_extensions import IntVar
 import numpy as np
 from scipy.ndimage import median_filter
 from scipy.optimize import curve_fit
@@ -9,6 +10,52 @@ from . import convol
 
 
 c = c.value
+
+
+def scombine(wavelst, fluxlst, errlst=None, new_wave=None, method='weight', reject=None):
+    """combine spectra to one spectrum
+
+    Args:
+        wavelst ([np.ndarray, ndarray, ...]): the wavelength list of a series of spectra
+        fluxlst ([np.ndarray, ndarray, ...]): the flux list of a series of spectra
+        errlst ([np.ndarray, ndarray, ...], optional): the err list of a series of spectra, if errlst = None, the function will regard all err = 1. Defaults to None.
+        new_wave (np.ndarray, optional): the wavelength of the spectrum after the combination. If new_wave = None, wavelst[0] will be used as the base wavelength to rebin. Defaults to None.
+        method (str, optional): The method of how to combine the spectra, such methods are allowed: 'weight', 'mean', 'median', 'add'. Defaults to 'weight'.
+        reject (str, optional): How to reject the spectra when doing the combination, such value is allowed: 'minmax', '3sigma'. Defaults to None.
+
+    Returns:
+        outflux, outerr: the flux and err after the spectra combination
+    """
+    if new_wave is None:
+        new_wave = wavelst[0]
+    if errlst is None:
+        errlst = []
+        for wave in wavelst:
+            errlst.append(np.ones(wave.shape, dtype=np.float64))
+    nfluxlst = []
+    nerrlst = []
+    nivarlst = []
+    for ind, wave in enumerate(wavelst):
+        flux = fluxlst[ind]
+        err = errlst[ind]
+        nflux = np.array(rebin.rebin(wave, flux, new_wave))
+        nerr = np.array(rebin.rebin_err(wave, err, new_wave))
+        nfluxlst.append(nflux)
+        nerrlst.append(nerr)
+        nivarlst.append(1 / nerr)
+    nfluxlst = np.array(nfluxlst)
+    nerrlst = np.array(nerrlst)
+    if method == 'weight':
+        sumflux = np.sum(nivarlst * nfluxlst, axis=0)
+        sumweight = np.sum(nivarlst, axis=0)
+        sumweight[sumweight == 0] = 1
+        outflux = sumflux / sumweight
+        newivar = np.sum(nivarlst, axis=0) / np.sqrt(len(nivarlst))
+        arg = np.where(newivar == 0)
+        newivar[arg] = 1
+        outerr = 1 / newivar
+        outerr[arg] = np.inf
+    return outflux, outerr
 
 
 def air2vac(wave):
