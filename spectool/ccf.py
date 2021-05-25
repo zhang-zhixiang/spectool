@@ -127,7 +127,7 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     return velocity
 
 
-def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0, maskwindow=None, returnrmax=False, fig=None):
+def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0, maskwindow=None, returnrmax=False, fig=None, degree=7):
     """find the radial velocity using ccf method
 
     Args:
@@ -142,6 +142,7 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
         velocity_resolution (float, optional): the velocity resolution of ccf, in the unit of km/s. Defaults to 1.0.
         returnrmax (bool, optional): whether return the Rmax, if set True, this function will return (velocity, rmax), default = False
         fig (matplotlib.figure or None, optional): if plot = True and fig is not None, this function will plot the result in fig
+        degree (int, optional): the order of the poly used to flat the spectra
 
     Returns:
         velocity(float, km/s): the velocity of the spectrum compared with the template. Here positive value means red shift,
@@ -165,8 +166,8 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     newave = np.exp(lognewave)
     newflux = np.array(rebin.rebin_padvalue(wave, flux, newave))
     newflux_ref = np.array(rebin.rebin_padvalue(wave_ref, flux_ref, newave))
-    cont = spec_func.continuum(newave, newflux, maxiterations=1)
-    cont_ref = spec_func.continuum(newave, newflux_ref, maxiterations=1)
+    cont = spec_func.continuum(newave, newflux, degree=degree, maxiterations=1)
+    cont_ref = spec_func.continuum(newave, newflux_ref, degree=degree, maxiterations=1)
     if maskwindow is not None:
         cont_old = cont.copy()
         cont_ref_old = cont_ref.copy()

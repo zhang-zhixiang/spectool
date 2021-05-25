@@ -29,9 +29,13 @@ def read_iraf_spec(fn, aper=1):
     step = head['CD1_1']
     start = head['CRVAL1']
     wave = np.arange(size) * step + start
-    band = get_band(fn, aper)
-    flux = data[0, band, :].astype('float64')
-    err = data[3, band, :].astype('float64')
+    if len(data.shape) == 2:
+        flux = data[0, :]
+        err = data[1, :]
+    else:
+        band = get_band(fn, aper)
+        flux = data[0, band, :].astype('float64')
+        err = data[3, band, :].astype('float64')
     return wave, flux, err
 
 
