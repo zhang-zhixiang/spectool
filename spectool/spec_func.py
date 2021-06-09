@@ -12,6 +12,22 @@ from . import convol
 c = c.value
 
 
+def get_SNR(flux):
+    """estimate the SNR of a spectrum
+
+    Args:
+        flux (numpy.ndarray): spectral flux
+
+    Returns:
+        float: the SNR of the flux
+    """
+    signal = np.median(flux)
+    n = len(flux)
+    noise = 0.6052697 * np.median(np.abs(2*flux[2:n-2] - flux[0:n-4] - flux[4:n]))
+    snr = signal / noise
+    return snr
+
+
 def scombine(wavelst, fluxlst, errlst=None, new_wave=None, method='weight', reject=None):
     """combine spectra to one spectrum
 
