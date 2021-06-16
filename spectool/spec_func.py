@@ -1,5 +1,6 @@
 from typing_extensions import IntVar
 import numpy as np
+from numpy.ma import clump_unmasked
 from scipy.ndimage import median_filter
 from scipy.optimize import curve_fit
 from lmfit.models import PolynomialModel
@@ -275,6 +276,10 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
     #         return res
     #     else:
     #         return res / epsdata
+    if plot is True:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(wave, flux)
 
     def func(x, *par):
         return np.array(convol.legendre_poly(x, par))
@@ -283,59 +288,57 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
     wave = wave[arg]
     flux = flux[arg]
 
-    newave = normalize_wave(wave)
+    newave = normalize_wave(np.log10(wave))
+    # newave = normalize_wave(wave)
     newave2 = newave.copy()
 
-    binsize = int(flux.size / 50) + 1
+    binsize = int(flux.size / 50)
     newflux = median_filter(flux, binsize)
+    if plot is True:
+        ax.plot(wave, newflux)
+    newflux = np.log10(newflux)
     # inipar = [1.0 for i in range(order+1)]
-    inipar = np.ones(degree+1)
+    # inipar = np.zeros(degree+1)
+    # inipar[0] = 1.0
+    inipar = 1/np.arange(1, degree+1, 1.0)
+    # inipar = np.random.random(degree+1)
     # out = leastsq(residual, inipar, args=(newave, newflux))
     popt, _ = curve_fit(func, newave, newflux, p0=inipar)
-    # print(popt)
-    # print(out[0])
-    scale = func(newave, *popt)
-    tmpuniform = newflux / scale
-    std = np.std(tmpuniform)
-    if rejectemission == False:
-        arg = np.where(tmpuniform > 1 - std)
-    else:
-        arg = np.where((tmpuniform > 1 - std) & (tmpuniform < 1 + std))
-    newave = newave[arg]
-    newflux = newflux[arg]
-    size = newave.size
+    if maxiterations < 1:
+        maxiterations = 1
     count = 0
-    while count < maxiterations:
-        # out = leastsq(residual, out[0], args=(newave, newflux))
-        # scale = np.array(convol.legendre_poly(newave, out[0]))
-        popt, _ = curve_fit(func, newave, newflux, p0=popt)
+    ideg = 1
+    popt = np.ones(ideg)
+    while ideg < degree + 1:
+    # while count < maxiterations:
+        tmppopt, _ = curve_fit(func, newave, newflux, p0=popt)
+        ideg = ideg + 1
+        popt = np.zeros(ideg)
+        popt[:-1] = tmppopt
         scale = func(newave, *popt)
-
         tmpuniform = newflux / scale
         std = np.std(tmpuniform)
-        if rejectemission == False:
-            arg = np.where(tmpuniform > 1 - std)
-        else:
-            arg = np.where((tmpuniform > 1 - std) & (tmpuniform < 1 + std))
+        arg = np.where(tmpuniform < 1 - 2*std)
+        newflux[arg] = newflux[arg] + scale[arg] * std
+        if rejectemission is True:
+            arg = np.where(tmpuniform > 1 + 2*std)
+            newflux[arg] = newflux[arg] - scale[arg] * std
         keep_size = arg[0].size
-        if keep_size < degree + 1:
-            break
-        newave = newave[arg]
-        newflux = newflux[arg]
-        if newave.size == size:
-            break
-        else:
-            size = newave.size
-        count = count + 1
+        # if keep_size == len(newave):
+        #     break
+        # count = count + 1
+
     # tmpscale = convol.legendre_poly(newave2, out[0])
     tmpscale = func(newave2, *popt)
+    tmpscale = 10**tmpscale
     # print('loop num = ', count)
     # print(popt)
+
     if plot is True:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
+        ax.plot(wave, 10**newflux)
         ax.plot(wave, tmpscale)
-        ax.plot(wave, flux)
+        
         # fig = 
         plt.show()
+        print('flag')
     return flux / tmpscale
