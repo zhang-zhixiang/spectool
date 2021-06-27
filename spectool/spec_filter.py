@@ -1,5 +1,6 @@
 import numpy as np
 from astropy.constants import c
+from scipy.interpolate import interp1d
 from . import convol
 
 
