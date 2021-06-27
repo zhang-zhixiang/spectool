@@ -42,7 +42,7 @@ def filter_use_given_profile_in_wave_space(wave, flux, wave_kernel, profile_kern
     """
     dw = wave[1] - wave[0]
     wend = wave_kernel[-1]
-    beginlst = np.linspace(0, dw, 10) + kernel_w[0]
+    beginlst = np.linspace(0, dw, 10) + wave_kernel[0]
     funinterp = interp1d(wave_kernel, profile_kernel, kind='cubic')
     balances_lst = np.array([_get_balances(funinterp, w, wend, dw) for w in beginlst])
     ind = np.argmin(balances_lst)
