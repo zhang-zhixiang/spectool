@@ -32,7 +32,7 @@ def get_fwhm_model(degree=2):
     lmpars = Parameters()
     for parname in parfwhm:
         lmpars.add(parname, 0.0)
-    lmpars[parfwhm[0]] = 1.0
+    lmpars[parfwhm[0]].value = 1.0
 
     return get_fwhm, lmpars
 
