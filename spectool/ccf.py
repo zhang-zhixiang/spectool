@@ -182,28 +182,6 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     delta_shift = velocity_resolution / c / log_delta_w
     shift, rmax = liblogccf.get_shift(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
     velocity = shift * log_delta_w * c
-    # if plot is True:
-    #     shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
-    #     shiftlst = np.array(shiftlst)
-    #     rlst = np.array(rlst)
-    #     arg = np.argsort(shiftlst)
-    #     shiftlst = shiftlst[arg]
-    #     rlst = rlst[arg]
-    #     velocitylst = shiftlst * log_delta_w * c
-    #     fig = plt.figure(figsize=(13, 4))
-    #     ax1 = fig.add_axes([0.05, 0.05+0.02, 0.6, 0.4])
-    #     ax2 = fig.add_axes([0.05, 0.53+0.02, 0.6, 0.4])
-    #     ax3 = fig.add_axes([0.68, 0.05+0.02, 0.28, 0.88])
-    #     # ax = fig.add_subplot(111)
-    #     ax1.plot(newave, cont, label='spec')
-    #     ax1.legend()
-    #     ax2.plot(newave, cont_ref, color='C1', label='template')
-    #     ax2.legend()
-    #     ax3.plot(velocitylst, rlst)
-    #     ax3.axvline(velocity, color='red', linestyle='--', label='vel = %.2f km/s' % velocity)
-    #     ax3.axhline(rmax, color='C3', linestyle=':', label='rmax = %.2f' % rmax)
-    #     ax3.legend()
-    #     plt.show()
     if plot is True:
         shiftlst, rlst = liblogccf.get_ccf(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
         shiftlst = np.array(shiftlst)
@@ -245,6 +223,77 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     if returnrmax is True:
         return velocity, rmax
     return velocity
+
+
+def find_radial_velocity2_mc(wave, flux, fluxerr, wave_ref, flux_ref, mcnum=1000,
+                             mult=True, ccfleft=-800, ccfright=800, velocity_resolution=1, degree=7):
+    """find the radial velocity using ccf method
+
+    Args:
+        wave (numpy.ndarray): spectral wave
+        flux (numpy.ndarray): spectral flux
+        fluxerr (numpy.ndarray): spectral flux error (if fluxerr is unknown, the fluxerr can be seted to np.zeros(flux.size))
+        wave_ref (numpy.ndarray): the spectral wave of template
+        flux_ref (numpy.ndarray): the spectral flux of template
+        mcnum (int, optional): the number of iteration
+        mult (bool, optional): use multiplication to cal the ccf value, else use diff. Defaults to True.
+        ccfleft (int, optional): the left edge of ccf funtion, in the unit of km/s. Defaults to -800.
+        ccfright (int, optional): the right edge of ccf function, in the unit of km/s. Defaults to 800.
+        velocity_resolution (float, optional): the velocity resolution of ccf, in the unit of km/s. Defaults to 1.0.
+        degree (int, optional): the order of the poly used to flat the spectra
+
+    Returns:
+        velocity list (numpy.ndarray, unit=km/s): the velocity list of the spectrum compared 
+        with the template after the preproccess of FR/RSS.
+        Here positive value means red shift, negative value means blue shift.
+    """
+    wl = max(wave[0], wave_ref[0])
+    wr = min(wave[-1], wave_ref[-1])
+    arg = np.where((wave<wr) & (wave>wl))
+    wave = wave[arg]
+    flux = flux[arg]
+    arg = np.where((wave_ref<wr) & (wave_ref>wl))
+    wave_ref = wave_ref[arg]
+    flux_ref = flux_ref[arg]
+    c = 299792.458 # km/s
+    logwave = np.log(wave)
+    logwave_ref = np.log(wave_ref)
+    log_delta_w = np.min(np.diff(logwave))
+    logwbegin = min(logwave[0], logwave_ref[0])
+    logwend = max(logwave[-1], logwave_ref[-1])
+    lognewave = np.arange(logwbegin, logwend, log_delta_w)
+    newave = np.exp(lognewave)
+    newflux = np.array(rebin.rebin_padvalue(wave, flux, newave))
+    newflux_ref = np.array(rebin.rebin_padvalue(wave_ref, flux_ref, newave))
+    cont = spec_func.continuum(newave, newflux, degree=degree, maxiterations=1)
+    cont_ref = spec_func.continuum(newave, newflux_ref, degree=degree, maxiterations=1)
+    scale = cont / newflux
+    scale_ref = cont_ref / newflux_ref
+    velocity_lst = []
+    for ind in range(mcnum):
+        fluxc = flux.copy()
+        err = np.random.normal(size=fluxc.size) * fluxerr
+        fluxc = fluxc + err
+        arg = np.unique(np.random.choice(np.arange(fluxc.size), size=fluxc.size, replace=True))
+        swave = wave[arg]
+        sflux = fluxc[arg]
+        argref = np.unique(np.random.choice(np.arange(flux_ref.size), size=flux_ref.size, replace=True))
+        swave_ref = wave_ref[argref]
+        sflux_ref = flux_ref[argref]
+        newflux = np.array(rebin.rebin_padvalue(swave, sflux, newave))
+        newflux_ref = np.array(rebin.rebin_padvalue(swave_ref, sflux_ref, newave))
+        cont = newflux * scale
+        cont_ref = newflux_ref * scale_ref
+
+        norm_cont = (cont - np.mean(cont)) / np.std(cont)
+        norm_cont_ref = (cont_ref - np.mean(cont_ref)) / np.std(cont_ref)
+        shiftleft = int(math.floor(ccfleft / c / log_delta_w))
+        shiftright = int(math.ceil(ccfright / c / log_delta_w))
+        delta_shift = velocity_resolution / c / log_delta_w
+        shift, rmax = liblogccf.get_shift(norm_cont, norm_cont_ref, shiftleft, shiftright, delta_shift, True)
+        velocity = shift * log_delta_w * c
+        velocity_lst.append(velocity)
+    return np.array(velocity_lst)
 
 
 def find_radial_velocity_mc(wave, flux, wave_ref, flux_ref, mult=True, plot=False, ccfleft=-800, ccfright=800, velocity_resolution=1.0, mcnumber=50, incratio=0.5):
