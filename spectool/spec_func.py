@@ -346,6 +346,10 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
     count = 0
     ideg = 1
     popt = np.ones(ideg)
+    arg_protect = np.ones(dtype=bool)
+    tmp_size = arg_protect.size
+    arg_protect[arg_protect < 0.1 * tmp_size] = False
+    arg_protect[arg_protect > 0.9 * tmp_size] = False
     while ideg < degree + 1:
     # while count < maxiterations:
         tmppopt, _ = curve_fit(func, newave, newflux, p0=popt)
@@ -355,10 +359,10 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
         scale = func(newave, *popt)
         tmpuniform = newflux / scale
         std = np.std(tmpuniform)
-        arg = np.where(tmpuniform < 1 - 2*std)
+        arg = np.where((tmpuniform < 1 - 2*std) & arg_protect)
         newflux[arg] = newflux[arg] + scale[arg] * std
         if rejectemission is True:
-            arg = np.where(tmpuniform > 1 + 2*std)
+            arg = np.where((tmpuniform > 1 + 2*std) & arg_protect)
             newflux[arg] = newflux[arg] - scale[arg] * std
         keep_size = arg[0].size
         # if keep_size == len(newave):
