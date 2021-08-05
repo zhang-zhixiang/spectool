@@ -290,7 +290,7 @@ def spec_match(wave, flux, wave_ref, flux_ref, mask=None, degree=20):
     # return out
 
 
-def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission=False):
+def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission=False, mask_window=None):
     """reduce the spectrum continuum, and return the uniform flux
     after the continuum correction
 
@@ -313,13 +313,18 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
     #         return res
     #     else:
     #         return res / epsdata
+    if mask_window is not None:
+        arg_mask = mask_window(wave, mask_window)
     if plot is True:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.plot(wave, flux)
 
     def func(x, *par):
-        return np.array(convol.legendre_poly(x, par))
+        if mask_window is None:
+            return np.array(convol.legendre_poly(x, par))
+        else:
+            return np.array(convol.legendre_poly(x, par))[arg_mask]
 
     arg = np.where(np.isfinite(wave) & np.isfinite(flux))
     wave = wave[arg]
