@@ -314,17 +314,16 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
     #     else:
     #         return res / epsdata
     if mask_window is not None:
-        arg_mask = mask_window(wave, mask_window)
+        arg_mask = mask_wave(wave, mask_window)
+    else:
+        arg_mask = np.ones(wave.size, dtype=bool)
     if plot is True:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.plot(wave, flux)
 
     def func(x, *par):
-        if mask_window is None:
-            return np.array(convol.legendre_poly(x, par))
-        else:
-            return np.array(convol.legendre_poly(x, par))[arg_mask]
+        return np.array(convol.legendre_poly(x, par))
 
     arg = np.where(np.isfinite(wave) & np.isfinite(flux))
     wave = wave[arg]
@@ -345,7 +344,7 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
     inipar = 1/np.arange(1, degree+1, 1.0)
     # inipar = np.random.random(degree+1)
     # out = leastsq(residual, inipar, args=(newave, newflux))
-    popt, _ = curve_fit(func, newave, newflux, p0=inipar)
+    popt, _ = curve_fit(func, newave[arg_mask], newflux[arg_mask], p0=inipar)
     if maxiterations < 1:
         maxiterations = 1
     count = 0
@@ -357,7 +356,7 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
     arg_protect[arg_protect > 0.9 * tmp_size] = False
     while ideg < degree + 1:
     # while count < maxiterations:
-        tmppopt, _ = curve_fit(func, newave, newflux, p0=popt)
+        tmppopt, _ = curve_fit(func, newave[arg_mask], newflux[arg_mask], p0=popt)
         ideg = ideg + 1
         popt = np.zeros(ideg)
         popt[:-1] = tmppopt
@@ -383,8 +382,16 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
     if plot is True:
         ax.plot(wave, 10**newflux)
         ax.plot(wave, tmpscale)
+        if mask_window is not None:
+            yl, yr = ax.get_ylim()
+            for ind, win in enumerate(mask_window):
+                if ind == 0:
+                    ax.fill_between(win, [yl, yl], [yr, yr], color='grey', alpha=0.3, label='mask window')
+                else:
+                    ax.fill_between(win, [yl, yl], [yr, yr], color='grey', alpha=0.3)
+            ax.set_ylim(yl, yr)
+            ax.legend()
         
-        # fig = 
         plt.show()
-        print('flag')
+        # print('flag')
     return flux / tmpscale
