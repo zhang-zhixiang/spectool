@@ -346,7 +346,7 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
     count = 0
     ideg = 1
     popt = np.ones(ideg)
-    arg_protect = np.ones(dtype=bool)
+    arg_protect = np.ones(newflux.size, dtype=bool)
     tmp_size = arg_protect.size
     arg_protect[arg_protect < 0.1 * tmp_size] = False
     arg_protect[arg_protect > 0.9 * tmp_size] = False
