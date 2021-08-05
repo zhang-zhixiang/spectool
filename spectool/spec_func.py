@@ -29,6 +29,27 @@ def get_SNR(flux):
     return snr
 
 
+def plot_spec(wave, flux, ax=None, select_wins=None, mask_wins=None):
+    if ax is None:
+        ax = plt.gca()
+    ax.plot(wave, flux)
+    yl, yr = ax.get_ylim()
+    if select_wins is not None:
+        for ind, win in enumerate(select_wins):
+            if ind == 0:
+                ax.fill_between(win, [yl, yl], [yr, yr], color='blue', alpha=0.3, label='select win')
+            else:
+                ax.fill_between(win, [yl, yl], [yr, yr], color='blue', alpha=0.3)
+    if mask_wins is not None:
+        for ind, win in enumerate(mask_wins):
+            if ind == 0:
+                ax.fill_between(win, [yl, yl], [yr, yr], color='grey', alpha=0.3, label='mask win')
+            else:
+                ax.fill_between(win, [yl, yl], [yr, yr], color='grey', alpha=0.3)
+    ax.legend()
+    return ax
+
+
 def scombine(wavelst, fluxlst, errlst=None, new_wave=None, method='weight', reject=None):
     """combine spectra to one spectrum
 
