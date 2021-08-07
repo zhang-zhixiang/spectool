@@ -144,6 +144,7 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
         velocity_resolution (float, optional): the velocity resolution of ccf, in the unit of km/s. Defaults to 1.0.
         returnrmax (bool, optional): whether return the Rmax, if set True, this function will return (velocity, rmax), default = False
         fig (matplotlib.figure or None, optional): if plot = True and fig is not None, this function will plot the result in fig
+        do_continuum (bool, optional): whether do the continuum before measure radial velocity, default = True.
         degree (int, optional): the order of the poly used to flat the spectra
 
     Returns:
@@ -232,7 +233,8 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
 
 
 def find_radial_velocity2_mc(wave, flux, fluxerr, wave_ref, flux_ref, mcnum=1000,
-                             mult=True, ccfleft=-800, ccfright=800, velocity_resolution=1, degree=7):
+                             mult=True, ccfleft=-800, ccfright=800, velocity_resolution=1,
+                             do_continuum=True, degree=7):
     """find the radial velocity using ccf method
 
     Args:
@@ -246,6 +248,7 @@ def find_radial_velocity2_mc(wave, flux, fluxerr, wave_ref, flux_ref, mcnum=1000
         ccfleft (int, optional): the left edge of ccf funtion, in the unit of km/s. Defaults to -800.
         ccfright (int, optional): the right edge of ccf function, in the unit of km/s. Defaults to 800.
         velocity_resolution (float, optional): the velocity resolution of ccf, in the unit of km/s. Defaults to 1.0.
+        do_continuum (bool, optional): whether do the continuum to flat the spectra before measure the radial velocity, default = True.
         degree (int, optional): the order of the poly used to flat the spectra
 
     Returns:
@@ -271,8 +274,12 @@ def find_radial_velocity2_mc(wave, flux, fluxerr, wave_ref, flux_ref, mcnum=1000
     newave = np.exp(lognewave)
     newflux = np.array(rebin.rebin_padvalue(wave, flux, newave))
     newflux_ref = np.array(rebin.rebin_padvalue(wave_ref, flux_ref, newave))
-    cont = spec_func.continuum(newave, newflux, degree=degree, maxiterations=1)
-    cont_ref = spec_func.continuum(newave, newflux_ref, degree=degree, maxiterations=1)
+    if do_continuum is True:
+        cont = spec_func.continuum(newave, newflux, degree=degree, maxiterations=1)
+        cont_ref = spec_func.continuum(newave, newflux_ref, degree=degree, maxiterations=1)
+    else:
+        cont = newflux
+        cont_ref = newflux_ref
     scale = cont / newflux
     scale_ref = cont_ref / newflux_ref
     velocity_lst = []
