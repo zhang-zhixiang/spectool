@@ -258,10 +258,11 @@ def find_radial_velocity2_mc(wave, flux, fluxerr, wave_ref, flux_ref, mcnum=1000
     """
     wl = max(wave[0], wave_ref[0])
     wr = min(wave[-1], wave_ref[-1])
-    arg = np.where((wave<wr) & (wave>wl))
+    arg = np.where((wave<=wr) & (wave>=wl))
     wave = wave[arg]
     flux = flux[arg]
-    arg = np.where((wave_ref<wr) & (wave_ref>wl))
+    fluxerr = fluxerr[arg]
+    arg = np.where((wave_ref<=wr) & (wave_ref>=wl))
     wave_ref = wave_ref[arg]
     flux_ref = flux_ref[arg]
     c = 299792.458 # km/s
