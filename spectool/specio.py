@@ -123,10 +123,11 @@ def read_lamost_med(fn, hduid):
     data = fits.getdata(fn, ext=hduid)
     wave = 10**data['loglam'].astype('float64')
     flux = data['flux'].astype('float64')
-    err = data['IVAR'].astype('float64')
-    arg = err == 0.0
-    err[arg] = 1.0
-    err = 1 / err
+    invar = data['IVAR'].astype('float64')
+    arg = invar == 0.0
+    invar[arg] = 1.0
+    invar2 = invar**0.5
+    err = 1 / invar2
     err[arg] = np.inf
     arg = np.argsort(wave)
     wave = wave[arg]
