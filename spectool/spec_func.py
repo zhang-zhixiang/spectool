@@ -216,7 +216,7 @@ def mask_wave(wave, mask=None):
         lw, rw = win
         arg_tmp = (wave < lw) | (wave > rw)
         arg = arg & arg_tmp
-    return np.where(arg)
+    return arg
 
 
 def get_delta_wave(wave):
@@ -252,7 +252,7 @@ def select_wave(wave, select_window=None):
         lw, rw = win
         arg_tmp = (wave > lw) & (wave < rw)
         arg = arg | arg_tmp
-    return np.where(arg)
+    return arg
 
 
 def spec_match(wave, flux, wave_ref, flux_ref, mask=None, degree=20):
