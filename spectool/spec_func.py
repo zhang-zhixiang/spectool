@@ -76,13 +76,17 @@ def scombine(wavelst, fluxlst, errlst=None, new_wave=None, method='weight', reje
     for ind, wave in enumerate(wavelst):
         flux = fluxlst[ind]
         err = errlst[ind]
-        nflux = np.array(rebin.rebin(wave, flux, new_wave))
+        nflux = np.array(rebin.rebin_padvalue(wave, flux, new_wave))
         nerr = np.array(rebin.rebin_err(wave, err, new_wave))
         nfluxlst.append(nflux)
         nerrlst.append(nerr)
-        nivarlst.append(1 / nerr)
+        # nivarlst.append(1 / nerr)
     nfluxlst = np.array(nfluxlst)
     nerrlst = np.array(nerrlst)
+    if method == 'sum':
+        sumflux = np.sum(nfluxlst, axis=0)
+        sumerr = np.sqrt(np.sum(nerrlst**2, axis=0))
+        return new_wave, sumflux, sumerr
     if method == 'weight':
         sumflux = np.sum(nivarlst * nfluxlst, axis=0)
         sumweight = np.sum(nivarlst, axis=0)
@@ -93,7 +97,7 @@ def scombine(wavelst, fluxlst, errlst=None, new_wave=None, method='weight', reje
         newivar[arg] = 1
         outerr = 1 / newivar
         outerr[arg] = np.inf
-    return outflux, outerr
+    return new_wave, outflux, outerr
 
 
 def air2vac(wave):
