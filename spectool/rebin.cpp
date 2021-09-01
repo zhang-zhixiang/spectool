@@ -6,6 +6,7 @@
 #include <vector>
 #define NDEBUG
 #include <assert.h>
+#include<gsl/gsl_statistics.h>
 #include "pybind11/stl.h"
 
 #include "types.h"
@@ -90,7 +91,13 @@ std::vector<wtf> merge_edge(const DARR& wave,
 // don't worry about the efficiency, don't make things complex
 DARR rebin_err(const DARR& wave, const DARR& err, const DARR& new_wave) {
   DARR new_err;
-  auto sorted_data = merge_edge(wave, err, new_wave);
+  // err.data();
+  DARR nerr(err.begin(), err.end());
+  double med_value = gsl_stats_median(nerr.data(), 0, err.size());
+  if (med_value > 0){
+    for(size_t ind = 0; ind < nerr.size(); ++ind) nerr[ind] /= med_value;
+  }
+  auto sorted_data = merge_edge(wave, nerr, new_wave);
   typedef decltype(sorted_data.begin()) ITR;
   std::vector<std::pair<ITR, ITR>> blocks;
   for (auto itr = sorted_data.begin(); itr != sorted_data.end(); ++itr)
@@ -125,6 +132,7 @@ DARR rebin_err(const DARR& wave, const DARR& err, const DARR& new_wave) {
     new_err.push_back(err);
   }
   assert(new_err.size() == new_wave.size());
+  for(auto itr = new_err.begin(); itr != new_err.end(); ++itr) *itr *= med_value;
   return new_err;
 }
 
