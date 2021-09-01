@@ -27,7 +27,7 @@ $(libconvol) : convol.cpp types.cpp
 	$(CC) convol.cpp types.cpp -o $(libconvol) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(GSL)
 
 $(librebin) : rebin.cpp types.cpp
-	$(CC) rebin.cpp types.cpp -o $(librebin) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11)
+	$(CC) rebin.cpp types.cpp -o $(librebin) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(GSL)
 
 $(libccf) : iccf.cpp types.cpp
 	$(CC) iccf.cpp types.cpp -o $(libccf) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11)
