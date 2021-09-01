@@ -213,7 +213,7 @@ def mask_wave(wave, mask=None):
         A array : where the wave not in the mask windows
     """
     if mask is None:
-        return np.where(wave < np.inf)
+        return wave < np.inf
     lw, rw = mask[0]
     arg = (wave < lw) | (wave > rw)
     for win in mask[1:]:
@@ -249,7 +249,7 @@ def select_wave(wave, select_window=None):
         A Array: the wave index in the select windows
     """
     if select_window is None:
-        return np.where(wave < np.inf)
+        return wave < np.inf
     lw, rw = select_window[0]
     arg = (wave > lw) & (wave < rw)
     for win in select_window[1:]:
