@@ -179,7 +179,7 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
         cont_old = cont.copy()
         cont_ref_old = cont_ref.copy()
         arg = spec_func.select_wave(newave, maskwindow)
-        print(arg)
+        # print(arg)
         cont[arg] = 1.0
         cont_ref[arg] = 1.0
     norm_cont = (cont - np.mean(cont)) / np.std(cont)
@@ -234,6 +234,7 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
 
 def find_radial_velocity2_mc(wave, flux, fluxerr, wave_ref, flux_ref, mcnum=1000,
                              mult=True, ccfleft=-800, ccfright=800, velocity_resolution=1,
+                             maskwindow=None,
                              do_continuum=True, degree=7):
     """find the radial velocity using ccf method
 
@@ -276,11 +277,17 @@ def find_radial_velocity2_mc(wave, flux, fluxerr, wave_ref, flux_ref, mcnum=1000
     newflux = np.array(rebin.rebin_padvalue(wave, flux, newave))
     newflux_ref = np.array(rebin.rebin_padvalue(wave_ref, flux_ref, newave))
     if do_continuum is True:
-        cont = spec_func.continuum(newave, newflux, degree=degree, maxiterations=1)
-        cont_ref = spec_func.continuum(newave, newflux_ref, degree=degree, maxiterations=1)
+        cont = spec_func.continuum(newave, newflux, degree=degree, maxiterations=1, mask_window=maskwindow)
+        cont_ref = spec_func.continuum(newave, newflux_ref, degree=degree, maxiterations=1, mask_window=maskwindow)
     else:
         cont = newflux
         cont_ref = newflux_ref
+    if maskwindow is not None:
+        cont_old = cont.copy()
+        cont_ref_old = cont_ref.copy()
+        arg = spec_func.select_wave(newave, maskwindow)
+        cont[arg] = 1.0
+        cont_ref[arg] = 1.0
     scale = cont / newflux
     scale_ref = cont_ref / newflux_ref
     velocity_lst = []
