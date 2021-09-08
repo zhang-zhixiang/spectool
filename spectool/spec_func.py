@@ -13,6 +13,55 @@ from . import convol
 c = c.value
 
 
+def get_FWHM(wave, flux, winl, winr, plot=False):
+    argl = select_wave(wave, winl)
+    argr = select_wave(wave, winr)
+    wl = np.median(wave[argl])
+    fl = np.median(flux[argl])
+    wr = np.median(wave[argr])
+    fr = np.median(flux[argr])
+    k = (fr - fl) / (wr - wl)
+    # y = k * x + y0 --> y0 = y - k * x
+    y0 = fl - k * wl
+    arg = select_wave(wave, [[wl, wr]])
+    nwave = wave[arg]
+    nflux = flux[arg]
+    cont = k * nwave + y0
+    fline = nflux - cont
+    dense_wave = np.linspace(nwave[0], nwave[-1], len(nwave)*100)
+    dense_flux = np.interp(dense_wave, nwave, fline)
+    fmax = np.max(dense_flux)
+    fmax_2 = fmax / 2
+    arg = dense_flux > fmax_2
+    w_sel = dense_wave[arg]
+    w_sel_l = w_sel[0]
+    w_sel_r = w_sel[-1]
+    fwhm = w_sel_r - w_sel_l
+    if plot is True:
+        fig = plt.figure()
+        ax1 = fig.add_subplot(211)
+        ax2 = fig.add_subplot(212)
+        ax1.plot(wave, flux)
+        ax1.plot(nwave, cont)
+        v1 = winl[0][0]
+        v2 = winl[0][1]
+        v3 = winr[0][0]
+        v4 = winr[0][1]
+        ax1.axvline(v1, color='C3', linestyle=':')
+        ax1.axvline(v2, color='C3', linestyle=':')
+        ax1.axvline(v3, color='C3', linestyle=':')
+        ax1.axvline(v4, color='C3', linestyle=':')
+        ax1.scatter([wl, wr], [fl, fr], color='red')
+        ax2.plot(nwave, fline)
+        ax2.axhline(fmax, color='C2', linestyle=':')
+        ax2.axhline(fmax_2, color='red', linestyle=':')
+        ax2.axhline(0, color='C2', linestyle=':')
+        ax2.axvline(w_sel_l, color='C4', linestyle=':')
+        ax2.axvline(w_sel_r, color='C4', linestyle=':')
+        plt.show()
+    return fwhm
+
+
 def get_SNR(flux):
     """estimate the SNR of a spectrum
 
