@@ -105,13 +105,20 @@ def scombine(wavelst, fluxlst, errlst=None, new_wave=None, method='weight', reje
     Args:
         wavelst ([np.ndarray, ndarray, ...]): the wavelength list of a series of spectra
         fluxlst ([np.ndarray, ndarray, ...]): the flux list of a series of spectra
-        errlst ([np.ndarray, ndarray, ...], optional): the err list of a series of spectra, if errlst = None, the function will regard all err = 1. Defaults to None.
-        new_wave (np.ndarray, optional): the wavelength of the spectrum after the combination. If new_wave = None, wavelst[0] will be used as the base wavelength to rebin. Defaults to None.
-        method (str, optional): The method of how to combine the spectra, such methods are allowed: 'weight', 'mean', 'median', 'add'. Defaults to 'weight'.
-        reject (str, optional): How to reject the spectra when doing the combination, such value is allowed: 'minmax', '3sigma'. Defaults to None.
+        errlst ([np.ndarray, ndarray, ...], optional): the err list of a series of spectra.
+            If errlst = None, the function will regard all err = 1. 
+            Defaults to None.
+        new_wave (np.ndarray, optional): the wavelength of the spectrum after the combination. 
+            If new_wave = None, wavelst[0] will be used as the base wavelength to rebin. 
+            Defaults to None.
+        method (str, optional): The method of how to combine the spectra.
+            The methods include: 'weight', 'sum', 'mean', 'median'. 
+            Defaults to 'weight'.
+        reject (str, optional): How to reject the spectra when doing the combination.
+            The values allowed include: 'minmax', '3sigma'. Defaults to None.
 
     Returns:
-        outflux, outerr: the flux and err after the spectra combination
+        outwave, outflux, outerr: the wave, flux and err after the spectra combination
     """
     if new_wave is None:
         new_wave = wavelst[0]
