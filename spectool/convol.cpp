@@ -439,7 +439,7 @@ VEC gauss_filter_wavespace(CVEC& wave, CVEC& flux, double sigma){
     for(int j = ind1; j < ind2; ++j) sumflux += profilelst[j] * widthlst[j];
     double ratio = 1 / sumflux;
     for(int j = ind1; j < ind2; ++j) profilelst[j] *= ratio;
-    for(int j = ind1; j < ind2; ++j) out[j] += profilelst[j] * nflux[ind];
+    for(int j = ind1; j < ind2; ++j) out[j] += profilelst[j] * widthlst[j] * nflux[ind];
   }
   for(int ind = 0; ind < wave.size(); ++ind) out[ind] *= unit;
   return out;
