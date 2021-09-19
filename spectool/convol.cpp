@@ -399,7 +399,44 @@ VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profi
 //   return new_out;
 // }
 
+
+auto add_cap(CVEC& wave, CVEC& flux, double sigma){
+  std::deque<double> nwave(wave.begin(), wave.end());
+  std::deque<double> nflux(flux.begin(), flux.end());
+  const double wleft = wave.front() - 2 * sigma;
+  const double wright = wave.back() + 2 * sigma;
+  double dw = (wave.back() - wave.front()) / wave.size();
+  double winputleft = wave.front() - dw;
+  double finputleft = flux.front();
+  int indfrom = 0;
+  while(winputleft > wleft){
+    nwave.push_front(winputleft);
+    nflux.push_front(finputleft);
+    winputleft -= dw;
+    indfrom++;
+  }
+  double winputright = wave.back() + dw;
+  double finputright = flux.back();
+  while(winputright < wright){
+    nwave.push_back(winputright);
+    nflux.push_back(finputright);
+    winputright += dw;
+  }
+  VEC wout(nwave.begin(), nwave.end());
+  VEC fout(nflux.begin(), nflux.end());
+  return std::make_tuple(wout, fout, indfrom);
+}
+
+VEC _gauss_filter_wavespace(CVEC& wave, CVEC& flux, double sigma);
+
 VEC gauss_filter_wavespace(CVEC& wave, CVEC& flux, double sigma){
+  auto [nwave, nflux, indfrom] = add_cap(wave, flux, sigma);
+  auto out = _gauss_filter_wavespace(nwave, nflux, sigma);
+  VEC nout(out.begin() + indfrom, out.begin() + indfrom + wave.size());
+  return nout;
+}
+
+VEC _gauss_filter_wavespace(CVEC& wave, CVEC& flux, double sigma){
   VEC out(wave.size());
   for(int ind = 0; ind < out.size(); ++ind) out[ind] = 0;
   const double accflux = accumulate(flux.begin(), flux.end(), 0);
