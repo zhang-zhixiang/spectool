@@ -399,6 +399,52 @@ VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profi
 //   return new_out;
 // }
 
+VEC gauss_filter_wavespace(CVEC& wave, CVEC& flux, double sigma){
+  VEC out(wave.size());
+  for(int ind = 0; ind < out.size(); ++ind) out[ind] = 0;
+  const double accflux = accumulate(flux.begin(), flux.end(), 0);
+  const double unit = accflux / wave.size();
+  VEC nflux(flux);
+  // normalization to improve the result accuracy
+  for(int ind = 0; ind < wave.size(); ++ind) nflux[ind] /= unit;
+  VEC widthlst(wave.size());
+  std::adjacent_difference(wave.begin(), wave.end(), widthlst.begin());
+  widthlst[0] = widthlst[1];
+  VEC profilelst(wave.size());
+  int ind1, ind2;
+  const double cutoff_v = 1.0e-5;
+  for(int ind = 0; ind < wave.size(); ++ind){
+    double w = wave[ind];
+    for(int j = ind; j >= 0; --j){
+      double wj = wave[j];
+      double length = w - wj;
+      double length2 = length * length;
+      double valj = exp(-length2 / (2*sigma*sigma));
+      profilelst[j] = valj;
+      ind1 = j;
+      if (valj < cutoff_v) break;
+      if(j == 0) break;
+    }
+    for(int j = ind + 1; j <= wave.size(); ++j){
+      ind2 = j;
+      if(j == wave.size()) break;
+      double wj = wave[j];
+      double length = wj - w;
+      double length2 = length * length;
+      double valj = exp(-length2 / (2*sigma*sigma));
+      profilelst[j] = valj;
+      if(valj < cutoff_v) {j++; break;}
+    }
+    double sumflux = 0;
+    for(int j = ind1; j < ind2; ++j) sumflux += profilelst[j] * widthlst[j];
+    double ratio = 1 / sumflux;
+    for(int j = ind1; j < ind2; ++j) profilelst[j] *= ratio;
+    for(int j = ind1; j < ind2; ++j) out[j] += profilelst[j] * nflux[ind];
+  }
+  for(int ind = 0; ind < wave.size(); ++ind) out[ind] *= unit;
+  return out;
+}
+
 // a gaussian filter for spectrum, the sigma of gaussians can be different in
 // different wave, the sigma is defined as sigma = par0 + par1*wave +
 // par2*wave^2 ... return the fluxes after smooth
@@ -466,6 +512,10 @@ py::array_t<double> numpy_gauss_filter(CVEC& wave,
   return VEC2numpyarr(gauss_filter(wave, flux, arrpar));
 }
 
+py::array_t<double> numpy_gauss_filter_wavespace(CVEC& wave, CVEC& flux, double sigma) {
+  return VEC2numpyarr(gauss_filter_wavespace(wave, flux, sigma));
+}
+
 py::array_t<double> numpy_gauss_filter_mutable(CVEC& wave,
                                                CVEC& flux,
                                                CVEC& arrvelocity) {
@@ -489,6 +539,8 @@ PYBIND11_MODULE(convol, m) {
 
   m.def("gauss_filter", numpy_gauss_filter,
         "Smooth the input spectrum\ninput par: wave, flux, arrpar");
+  m.def("gauss_filter_wavespace", numpy_gauss_filter_wavespace,
+        "Smooth the input spectrum in wave space\n Input par: wave, flux, sigma(double)");
   m.def("gauss_filter_mutable", numpy_gauss_filter_mutable,
         "Smooth the input spectrum\ninput par: wave, flux, arrvelocity");
   m.def("legendre_poly", numpy_legendre_poly,

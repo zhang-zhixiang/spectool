@@ -95,6 +95,21 @@ def gaussian_filter(wave, flux, velocity):
     return np.array(convol.gauss_filter(wave, flux, pararr))
 
 
+def gauss_filter_wavespace(wave, flux, fwhm):
+    """Smooth spectrum with gaussian kernel in wave space
+
+    Args:
+        wave (numpy.ndarray(float64)): -- spectrum wave
+        flux (numpy.ndarray(float64)): -- spectrum flux
+        fwhm (float): gaussian kernel width, in the unit of FWHM (AA)
+
+    Returns:
+        numpy.ndarray(float64): -- the spectrum flux after smooth
+    """
+    sigma = fwhm / 2.355
+    return np.array(convol.gauss_filter_wavespace(wave, flux, sigma))
+
+
 def gauss_filter_mutable(wave, flux, arrvelocity):
     """Smooth spectrum using gaussian kernel, where the kernel velocity in each wavelength can be different
 
