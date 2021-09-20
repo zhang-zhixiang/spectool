@@ -95,7 +95,7 @@ def gaussian_filter(wave, flux, velocity):
     return np.array(convol.gauss_filter(wave, flux, pararr))
 
 
-def gauss_filter_wavespace(wave, flux, fwhm):
+def gaussian_filter_wavespace(wave, flux, fwhm):
     """Smooth spectrum with gaussian kernel in wave space
 
     Args:
