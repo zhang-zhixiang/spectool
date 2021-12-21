@@ -375,7 +375,7 @@ def spec_match(wave, flux, wave_ref, flux_ref, mask=None, degree=20):
 
 
 def normalize_spec_gaussian_filter(wave, flux,
-                                 fwhm=50,
+                                 fwhm=100,
                                  mask_windows=None,
                                  plot=False):
     """normalize the spectrum using the gaussian filter method
