@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from astropy.constants import c
 from . import rebin
 from . import convol
+from . import spec_filter
 
 
 c = c.value
@@ -371,6 +372,39 @@ def spec_match(wave, flux, wave_ref, flux_ref, mask=None, degree=20):
     # datascale = mod.eval(params=result.params, x=wunit)
     # out = flux * datascale
     # return out
+
+
+def normalize_spec_gaussian_filter(wave, flux,
+                                 fwhm=50,
+                                 mask_windows=None,
+                                 plot=False):
+    """normalize the spectrum using the gaussian filter method
+
+    Args:
+        wave (numpy.ndarray): wavelength of the spectrum
+        flux (numpy.ndarray): flux of the spectrum
+        fwhm (float, optional): the width of the gaussian kernel. Defaults to 50.
+        mask_windows (list)], optional): The mask windows before to do the normalization, which is in the format of 
+        [
+            [[mask_w1, mask_w2], [left_cont_w1, left_cont_w2], [right_cont_w1, right_cont_w2]],
+            [[mask_w1, mask_w2], [left_cont_w1, left_cont_w2], [right_cont_w1, right_cont_w2]],
+            ...
+        ]. Defaults to None.
+        plot (bool, optional): whether plot. Defaults to False.
+
+    Returns:
+        numpy.ndarray: the normalized flux
+    """
+    nflux = flux.copy()
+    if mask_windows is not None:
+        for wins in mask_windows:
+            mask_win, cont_win1, cont_win2 = wins
+            cont = get_linear_continuum(wave, nflux, cont_win1, cont_win2)
+            arg = select_wave(wave, mask_win)
+            nflux[arg] = cont[arg]
+    cont = spec_filter.gauss_filter_wavespace(wave, nflux, fwhm)
+    normflux = flux / cont
+    return normflux
 
 
 def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission=False, mask_window=None):
