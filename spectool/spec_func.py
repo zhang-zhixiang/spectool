@@ -62,6 +62,29 @@ def get_FWHM(wave, flux, winl, winr, plot=False):
     return fwhm
 
 
+def get_linear_continuum(wave, flux, win1, win2):
+    """get a linear continuum from the spectrum
+
+    Args:
+        wave (numpy.ndarray): wavelength of the spectrum
+        flux (numpy.ndarray): flux of the spectrum
+        win1 ([[float, float]]): left continuum window
+        win2 ([[float, float]]): right continuum window
+
+    Returns:
+        numpy.ndarray: the linear continuum of the spectrum
+    """
+    arg1 = select_wave(wave, win1)
+    arg2 = select_wave(wave, win2)
+    w1 = np.median(wave[arg1])
+    w2 = np.median(wave[arg2])
+    f1 = np.median(flux[arg1])
+    f2 = np.median(flux[arg2])
+    slop = (f2 - f1) / (w2 - w1)
+    continuum = slop * (wave - w1) + f1
+    return continuum
+
+
 def get_SNR(flux):
     """estimate the SNR of a spectrum
 
