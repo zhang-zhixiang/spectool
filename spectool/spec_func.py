@@ -399,6 +399,10 @@ def normalize_spec_gaussian_filter(wave, flux,
     if mask_windows is not None:
         for wins in mask_windows:
             mask_win, cont_win1, cont_win2 = wins
+            wcl = cont_win1[1]
+            wcr = cont_win2[0]
+            if wcl < np.min(wave) or wcr > np.max(wave):
+                continue
             cont = get_linear_continuum(wave, nflux, [cont_win1], [cont_win2])
             arg = select_wave(wave, [mask_win])
             nflux[arg] = cont[arg]
