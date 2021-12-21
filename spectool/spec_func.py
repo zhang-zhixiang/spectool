@@ -402,7 +402,7 @@ def normalize_spec_gaussian_filter(wave, flux,
             cont = get_linear_continuum(wave, nflux, cont_win1, cont_win2)
             arg = select_wave(wave, mask_win)
             nflux[arg] = cont[arg]
-    cont = spec_filter.gauss_filter_wavespace(wave, nflux, fwhm)
+    cont = spec_filter.gaussian_filter_wavespace(wave, nflux, fwhm)
     normflux = flux / cont
     return normflux
 
