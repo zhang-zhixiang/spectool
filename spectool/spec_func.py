@@ -408,6 +408,26 @@ def normalize_spec_gaussian_filter(wave, flux,
             nflux[arg] = cont[arg]
     cont = spec_filter.gaussian_filter_wavespace(wave, nflux, fwhm)
     normflux = flux / cont
+    if plot is True:
+        plt.plot(wave, flux)
+        plt.plot(wave, cont)
+        if mask_windows is not None:
+            for wins in mask_windows:
+                mask_win, cont_win1, cont_win2 = wins
+                wcl = cont_win1[1]
+                wcr = cont_win2[0]
+                if wcl < np.min(wave) or wcr > np.max(wave):
+                    continue
+                w1, w2 = mask_win
+                plt.axvline(w1, linestyle=':', color='red')
+                plt.axvline(w2, linestyle=':', color='red')
+                w1, w2 = cont_win1
+                plt.axvline(w1, linestyle=':', color='blue')
+                plt.axvline(w2, linestyle=':', color='blue')
+                w1, w2 = cont_win2
+                plt.axvline(w1, linestyle=':', color='blue')
+                plt.axvline(w2, linestyle=':', color='blue')
+        plt.show()
     return normflux
 
 
