@@ -3,6 +3,7 @@ import numpy as np
 from numpy.ma import clump_unmasked
 from scipy.ndimage import median_filter
 from scipy.optimize import curve_fit
+from scipy import special
 from lmfit.models import PolynomialModel
 import matplotlib.pyplot as plt
 from astropy.constants import c
@@ -280,6 +281,25 @@ def normalize_wave(wave):
     med = (end + start) / 2
     new_wave = (wave - med) * scale
     return new_wave
+
+
+def get_scale(wave, scalepar):
+    """return the Legendre polynomial, which can be used to scale a spectrum
+
+    Args:
+        wave (numpy.ndarray): wavelength
+        scalepar (list like array): the coefficients of the Legendre polynomial, 
+          the format is like [1.0, -0.5, 0.25, -0.125], the length of scalepar 
+          is the degree of Legendre polynomial
+
+    Returns:
+        numpy.ndarray: the scale array calculated using Legendre polynomial
+    """
+    norm_wave = normalize_wave(wave)
+    scale = np.zeros(norm_wave.shape)
+    for nn, value in enumerate(scalepar):
+        scale = scale + special.eval_legendre(nn, norm_wave) * value
+    return scale
 
 
 def mask_wave(wave, mask=None):
