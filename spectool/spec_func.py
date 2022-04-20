@@ -451,8 +451,8 @@ def normalize_spec_gaussian_filter(wave, flux,
     return normflux
 
 
-def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission=False, mask_window=None):
-    """reduce the spectrum continuum, and return the uniform flux
+def continuum(wave, flux, fwhm=50, degree=7, plot=False, rejectemission=False, mask_window=None):
+    """reduce the spectrum continuum, and return the normalized flux
     after the continuum correction
 
     Arguments:
@@ -460,20 +460,15 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
         flux {numpy.ndarray(float64)} -- spectrum flux
 
     Keyword Arguments:
+        fwhm {float} -- the width of the gaussian kernel used to smooth the input spectrum. (default: {50})
         degree {int} -- legendre Polynomials order used to fit the continuum (default: {5})
-        maxiterations {int} -- max iterations (in order to reject absorption line) (default: {10})
         plot {bool} -- whether plot the spectrum and continuum profile (default: {False})
+        rejectemission {bool} -- whether reject the emission lines (default: {False})
+        mask_window {list} -- mask window, which is in the format of [[l1, r1], [l2, r2], ...add()] (default: {None})
 
     Returns:
-        numpy.ndarray(float64) -- the uniform flux
+        numpy.ndarray(float64) -- the normalized flux
     """
-    # def residual(par, x, data, epsdata=None):
-    #     ymodel = np.array(convol.legendre_poly(x, par))
-    #     res = ymodel - data
-    #     if epsdata is None:
-    #         return res
-    #     else:
-    #         return res / epsdata
     if mask_window is not None:
         arg_mask = mask_wave(wave, mask_window)
     else:
@@ -494,21 +489,10 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
     # newave = normalize_wave(wave)
     newave2 = newave.copy()
 
-    binsize = int(flux.size / 50)
-    newflux = median_filter(flux, binsize)
+    newflux = spec_filter.gaussian_filter_wavespace(wave, flux, fwhm)
     if plot is True:
         ax.plot(wave, newflux)
     newflux = np.log10(newflux)
-    # inipar = [1.0 for i in range(order+1)]
-    # inipar = np.zeros(degree+1)
-    # inipar[0] = 1.0
-    inipar = 1/np.arange(1, degree+1, 1.0)
-    # inipar = np.random.random(degree+1)
-    # out = leastsq(residual, inipar, args=(newave, newflux))
-    popt, _ = curve_fit(func, newave[arg_mask], newflux[arg_mask], p0=inipar)
-    if maxiterations < 1:
-        maxiterations = 1
-    count = 0
     ideg = 1
     popt = np.ones(ideg)
     arg_protect = np.ones(newflux.size, dtype=bool)
@@ -516,7 +500,6 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
     arg_protect[arg_protect < 0.1 * tmp_size] = False
     arg_protect[arg_protect > 0.9 * tmp_size] = False
     while ideg < degree + 1:
-    # while count < maxiterations:
         tmppopt, _ = curve_fit(func, newave[arg_mask], newflux[arg_mask], p0=popt)
         ideg = ideg + 1
         popt = np.zeros(ideg)
@@ -529,16 +512,9 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
         if rejectemission is True:
             arg = np.where((tmpuniform > 1 + 2*std) & arg_protect)
             newflux[arg] = newflux[arg] - scale[arg] * std
-        keep_size = arg[0].size
-        # if keep_size == len(newave):
-        #     break
-        # count = count + 1
 
-    # tmpscale = convol.legendre_poly(newave2, out[0])
     tmpscale = func(newave2, *popt)
     tmpscale = 10**tmpscale
-    # print('loop num = ', count)
-    # print(popt)
 
     if plot is True:
         ax.plot(wave, 10**newflux)
@@ -554,5 +530,4 @@ def continuum(wave, flux, degree=7, maxiterations=10, plot=False, rejectemission
             ax.legend()
         
         plt.show()
-        # print('flag')
     return flux / tmpscale
