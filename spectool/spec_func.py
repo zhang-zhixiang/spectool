@@ -495,23 +495,24 @@ def continuum(wave, flux, fwhm=50, degree=7, plot=False, rejectemission=False, m
     newflux = np.log10(newflux)
     ideg = 1
     popt = np.ones(ideg)
-    arg_protect = np.ones(newflux.size, dtype=bool)
+    arg_protect = np.zeros(newflux.size, dtype=bool)
     tmp_size = arg_protect.size
-    arg_protect[arg_protect < 0.1 * tmp_size] = False
-    arg_protect[arg_protect > 0.9 * tmp_size] = False
+    arg_protect[:int(tmp_size * 0.1)] = True
+    arg_protect[-int(tmp_size * 0.1):] = True
+    arg_sel = arg_mask
     while ideg < degree + 1:
-        tmppopt, _ = curve_fit(func, newave[arg_mask], newflux[arg_mask], p0=popt)
+        tmppopt, _ = curve_fit(func, newave[arg_sel], newflux[arg_sel], p0=popt)
         ideg = ideg + 1
         popt = np.zeros(ideg)
         popt[:-1] = tmppopt
         scale = func(newave, *popt)
-        tmpuniform = newflux / scale
-        std = np.std(tmpuniform)
-        arg = np.where((tmpuniform < 1 - 2*std) & arg_protect)
-        newflux[arg] = newflux[arg] + scale[arg] * std
+        tmp_normflux = newflux / scale
+        std = np.std(tmp_normflux[arg_sel])
         if rejectemission is True:
-            arg = np.where((tmpuniform > 1 + 2*std) & arg_protect)
-            newflux[arg] = newflux[arg] - scale[arg] * std
+            arg_instd = np.abs(tmp_normflux - 1.0) < 3 * std
+        else:
+            arg_instd = tmp_normflux - 1.0 > -3 * std
+        arg_sel = (arg_instd | arg_protect) & arg_mask
 
     tmpscale = func(newave2, *popt)
     tmpscale = 10**tmpscale
@@ -519,6 +520,8 @@ def continuum(wave, flux, fwhm=50, degree=7, plot=False, rejectemission=False, m
     if plot is True:
         ax.plot(wave, 10**newflux)
         ax.plot(wave, tmpscale)
+        arg_reject = np.where(arg_sel == False)
+        ax.plot(wave[arg_reject], flux[arg_reject], 'o', color='red')
         if mask_window is not None:
             yl, yr = ax.get_ylim()
             for ind, win in enumerate(mask_window):
