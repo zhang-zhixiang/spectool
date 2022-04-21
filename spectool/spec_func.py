@@ -451,7 +451,7 @@ def normalize_spec_gaussian_filter(wave, flux,
     return normflux
 
 
-def continuum(wave, flux, fwhm=50, degree=7, plot=False, rejectemission=False, mask_window=None):
+def continuum(wave, flux, kernel='median', width=50, degree=7, plot=False, rejectemission=False, mask_window=None):
     """reduce the spectrum continuum, and return the normalized flux
     after the continuum correction
 
@@ -460,7 +460,11 @@ def continuum(wave, flux, fwhm=50, degree=7, plot=False, rejectemission=False, m
         flux {numpy.ndarray(float64)} -- spectrum flux
 
     Keyword Arguments:
-        fwhm {float} -- the width of the gaussian kernel used to smooth the input spectrum. (default: {50})
+        kernel {str, 'median' or 'gaussian'} -- the kernel used to smooth the input spectrum. (default: {'median'})
+        width {float} -- the width of the kernel, unit is AA. 
+                         if the kernel is 'median', width means the bin width of the median kernel; 
+                         if the kernel is 'gaussian', the width means the gaussian kernel in the unit of FWHM.
+                         (default: {50})
         degree {int} -- legendre Polynomials order used to fit the continuum (default: {5})
         plot {bool} -- whether plot the spectrum and continuum profile (default: {False})
         rejectemission {bool} -- whether reject the emission lines (default: {False})
@@ -469,44 +473,43 @@ def continuum(wave, flux, fwhm=50, degree=7, plot=False, rejectemission=False, m
     Returns:
         numpy.ndarray(float64) -- the normalized flux
     """
+
+    if np.isfinite(wave.sum()) == False or np.isfinite(flux.sum()) == False:
+        raise ValueError('wave or flux is not finite')
+    if kernel == 'median':
+        wlength = wave[-1] - wave[0]
+        ratio = width / wlength
+        binsize = int(wave.size * ratio)
+        smoothflux = median_filter(flux, binsize)
+    elif kernel == 'gaussian':
+        smoothflux = spec_filter.gaussian_filter_wavespace(wave, flux, width)
+    else:
+        raise ValueError('kernel must be median or gaussian')
+
     if mask_window is not None:
         arg_mask = mask_wave(wave, mask_window)
     else:
         arg_mask = np.ones(wave.size, dtype=bool)
-    if plot is True:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(wave, flux)
 
     def func(x, *par):
         return np.array(convol.legendre_poly(x, par))
 
-    arg = np.where(np.isfinite(wave) & np.isfinite(flux))
-    wave = wave[arg]
-    flux = flux[arg]
-
-    newave = normalize_wave(np.log10(wave))
-    # newave = normalize_wave(wave)
-    newave2 = newave.copy()
-
-    newflux = spec_filter.gaussian_filter_wavespace(wave, flux, fwhm)
-    if plot is True:
-        ax.plot(wave, newflux)
-    newflux = np.log10(newflux)
+    logwave = normalize_wave(np.log10(wave))
+    logflux = np.log10(smoothflux)
     ideg = 1
     popt = np.ones(ideg)
-    arg_protect = np.zeros(newflux.size, dtype=bool)
+    arg_protect = np.zeros(logflux.size, dtype=bool)
     tmp_size = arg_protect.size
-    arg_protect[:int(tmp_size * 0.1)] = True
-    arg_protect[-int(tmp_size * 0.1):] = True
+    arg_protect[:int(tmp_size * 0.05)] = True
+    arg_protect[-int(tmp_size * 0.05):] = True
     arg_sel = arg_mask
     while ideg < degree + 1:
-        tmppopt, _ = curve_fit(func, newave[arg_sel], newflux[arg_sel], p0=popt)
+        tmppopt, _ = curve_fit(func, logwave[arg_sel], logflux[arg_sel], p0=popt)
         ideg = ideg + 1
         popt = np.zeros(ideg)
         popt[:-1] = tmppopt
-        scale = func(newave, *popt)
-        tmp_normflux = newflux / scale
+        scale = func(logwave, *popt)
+        tmp_normflux = 10**logflux / 10**scale
         std = np.std(tmp_normflux[arg_sel])
         if rejectemission is True:
             arg_instd = np.abs(tmp_normflux - 1.0) < 3 * std
@@ -514,14 +517,17 @@ def continuum(wave, flux, fwhm=50, degree=7, plot=False, rejectemission=False, m
             arg_instd = tmp_normflux - 1.0 > -3 * std
         arg_sel = (arg_instd | arg_protect) & arg_mask
 
-    tmpscale = func(newave2, *popt)
-    tmpscale = 10**tmpscale
+    tmpscale = 10**func(logwave, *popt)
 
     if plot is True:
-        ax.plot(wave, 10**newflux)
-        ax.plot(wave, tmpscale)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(wave, flux, color='grey', label='original')
+        ax.plot(wave, smoothflux, color='blue', label='smooth')
+        ax.plot(wave, tmpscale, color='red', label='fit')
         arg_reject = np.where(arg_sel == False)
-        ax.plot(wave[arg_reject], flux[arg_reject], 'o', color='red')
+        ax.plot(wave[arg_reject], flux[arg_reject], 'o', color='green', label='reject')
+        ax.plot(wave[arg_reject], smoothflux[arg_reject], 'o', color='orange', label='smooth reject')
         if mask_window is not None:
             yl, yr = ax.get_ylim()
             for ind, win in enumerate(mask_window):
@@ -530,7 +536,7 @@ def continuum(wave, flux, fwhm=50, degree=7, plot=False, rejectemission=False, m
                 else:
                     ax.fill_between(win, [yl, yl], [yr, yr], color='grey', alpha=0.3)
             ax.set_ylim(yl, yr)
-            ax.legend()
-        
+        ax.legend()
+        ax.set_title('kernel={}, width={}, degree={}'.format(kernel, width, degree))
         plt.show()
     return flux / tmpscale
