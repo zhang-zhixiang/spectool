@@ -403,8 +403,8 @@ VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profi
 auto add_cap(CVEC& wave, CVEC& flux, double sigma){
   std::deque<double> nwave(wave.begin(), wave.end());
   std::deque<double> nflux(flux.begin(), flux.end());
-  const double wleft = wave.front() - 2 * sigma;
-  const double wright = wave.back() + 2 * sigma;
+  const double wleft = wave.front() - 3 * sigma;
+  const double wright = wave.back() + 3 * sigma;
   double dw = (wave.back() - wave.front()) / wave.size();
   double winputleft = wave.front() - dw;
   double finputleft = flux.front();
@@ -437,16 +437,34 @@ VEC gauss_filter_wavespace(CVEC& wave, CVEC& flux, double sigma){
 }
 
 VEC _gauss_filter_wavespace(CVEC& wave, CVEC& flux, double sigma){
+  // for (int ind = 0; ind < wave.size() - 1; ++ind)
+  //   if (wave[ind] >= wave[ind + 1]){
+  //     std::cout << "Error: wave is not monotonic" << std::endl;
+  //     exit(1);
+  //   }
+  // std::cout << "sigma = " << sigma << std::endl;
+  // for (int i = 0; i < wave.size(); ++i){
+  //   std::cout << wave[i] << " " << flux[i] << std::endl;
+  // }
   VEC out(wave.size());
   for(int ind = 0; ind < out.size(); ++ind) out[ind] = 0;
-  const double accflux = accumulate(flux.begin(), flux.end(), 0);
+  // const double accflux = accumulate(flux.begin(), flux.end(), 0);
+  double accflux = 0;
+  for(auto & val : flux) accflux += val;
   const double unit = accflux / wave.size();
   VEC nflux(flux);
   // normalization to improve the result accuracy
+  // for(auto val : flux) std::cout << val << " ";
+  // std::cout << std::endl;
+  // std::cout << "len of flux: " << flux.size() << std::endl;
+  // std::cout << "accflux = " << accflux << std::endl;
+  // std::cout << "unit: " << unit << std::endl;
   for(int ind = 0; ind < wave.size(); ++ind) nflux[ind] /= unit;
   VEC widthlst(wave.size());
-  std::adjacent_difference(wave.begin(), wave.end(), widthlst.begin());
+  for(int ind = 0; ind < wave.size() - 1; ++ind) widthlst[ind+1] = wave[ind+1] - wave[ind];
   widthlst[0] = widthlst[1];
+  // std::adjacent_difference(wave.begin(), wave.end(), widthlst.begin());
+  // widthlst[0] = widthlst[1];
   VEC profilelst(wave.size());
   int ind1, ind2;
   const double cutoff_v = 1.0e-5;
@@ -473,10 +491,17 @@ VEC _gauss_filter_wavespace(CVEC& wave, CVEC& flux, double sigma){
       if(valj < cutoff_v) {j++; break;}
     }
     double sumflux = 0;
-    for(int j = ind1; j < ind2; ++j) sumflux += profilelst[j] * widthlst[j];
+    for(int j = ind1; j < ind2; ++j){
+      // std::cout << j << " " << profilelst[j] << " " << widthlst[j] << "\n";
+      sumflux += profilelst[j] * widthlst[j];
+    }
+    // std::cout << "sumflux " << sumflux << "\n";
     double ratio = 1 / sumflux;
+    double energy = widthlst[ind] * nflux[ind];
+    ratio *= energy;
     for(int j = ind1; j < ind2; ++j) profilelst[j] *= ratio;
-    for(int j = ind1; j < ind2; ++j) out[j] += profilelst[j] * widthlst[j] * nflux[ind];
+    // for(int j = ind1; j < ind2; ++j) out[j] += profilelst[j] * widthlst[j] * nflux[ind];
+    for(int j = ind1; j < ind2; ++j) out[j] += profilelst[j];
   }
   for(int ind = 0; ind < wave.size(); ++ind) out[ind] *= unit;
   return out;
