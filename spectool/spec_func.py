@@ -30,7 +30,7 @@ def get_FWHM(wave, flux, winl, winr, plot=False):
     nflux = flux[arg]
     cont = k * nwave + y0
     fline = nflux - cont
-    dense_wave = np.linspace(nwave[0], nwave[-1], len(nwave)*100)
+    dense_wave = np.linspace(nwave[0], nwave[-1], len(nwave) * 100)
     dense_flux = np.interp(dense_wave, nwave, fline)
     fmax = np.max(dense_flux)
     fmax_2 = fmax / 2
@@ -49,17 +49,17 @@ def get_FWHM(wave, flux, winl, winr, plot=False):
         v2 = winl[0][1]
         v3 = winr[0][0]
         v4 = winr[0][1]
-        ax1.axvline(v1, color='C3', linestyle=':')
-        ax1.axvline(v2, color='C3', linestyle=':')
-        ax1.axvline(v3, color='C3', linestyle=':')
-        ax1.axvline(v4, color='C3', linestyle=':')
-        ax1.scatter([wl, wr], [fl, fr], color='red')
+        ax1.axvline(v1, color="C3", linestyle=":")
+        ax1.axvline(v2, color="C3", linestyle=":")
+        ax1.axvline(v3, color="C3", linestyle=":")
+        ax1.axvline(v4, color="C3", linestyle=":")
+        ax1.scatter([wl, wr], [fl, fr], color="red")
         ax2.plot(nwave, fline)
-        ax2.axhline(fmax, color='C2', linestyle=':')
-        ax2.axhline(fmax_2, color='red', linestyle=':')
-        ax2.axhline(0, color='C2', linestyle=':')
-        ax2.axvline(w_sel_l, color='C4', linestyle=':')
-        ax2.axvline(w_sel_r, color='C4', linestyle=':')
+        ax2.axhline(fmax, color="C2", linestyle=":")
+        ax2.axhline(fmax_2, color="red", linestyle=":")
+        ax2.axhline(0, color="C2", linestyle=":")
+        ax2.axvline(w_sel_l, color="C4", linestyle=":")
+        ax2.axvline(w_sel_r, color="C4", linestyle=":")
         plt.show()
     return fwhm
 
@@ -98,7 +98,9 @@ def get_SNR(flux):
     """
     signal = np.median(flux)
     n = len(flux)
-    noise = 0.6052697 * np.median(np.abs(2*flux[2:n-2] - flux[0:n-4] - flux[4:n]))
+    noise = 0.6052697 * np.median(
+        np.abs(2 * flux[2 : n - 2] - flux[0 : n - 4] - flux[4:n])
+    )
     snr = signal / noise
     return snr
 
@@ -111,33 +113,35 @@ def plot_spec(wave, flux, ax=None, select_wins=None, mask_wins=None):
     if select_wins is not None:
         for ind, win in enumerate(select_wins):
             if ind == 0:
-                ax.fill_between(win, [yl, yl], [yr, yr], color='blue', alpha=0.3, label='select win')
+                ax.axvspan(win[0], win[1], color="blue", alpha=0.3, label="select win")
             else:
-                ax.fill_between(win, [yl, yl], [yr, yr], color='blue', alpha=0.3)
+                ax.axvspan(win[0], win[1], color="blue", alpha=0.3)
     if mask_wins is not None:
         for ind, win in enumerate(mask_wins):
             if ind == 0:
-                ax.fill_between(win, [yl, yl], [yr, yr], color='grey', alpha=0.3, label='mask win')
+                ax.axvspan(win[0], win[1], color="grey", alpha=0.3, label="mask win")
             else:
-                ax.fill_between(win, [yl, yl], [yr, yr], color='grey', alpha=0.3)
+                ax.axvspan(win[0], win[1], color="grey", alpha=0.3)
     ax.legend()
     return ax
 
 
-def scombine(wavelst, fluxlst, errlst=None, new_wave=None, method='weight', reject=None):
+def scombine(
+    wavelst, fluxlst, errlst=None, new_wave=None, method="weight", reject=None
+):
     """combine spectra to one spectrum
 
     Args:
         wavelst ([np.ndarray, ndarray, ...]): the wavelength list of a series of spectra
         fluxlst ([np.ndarray, ndarray, ...]): the flux list of a series of spectra
         errlst ([np.ndarray, ndarray, ...], optional): the err list of a series of spectra.
-            If errlst = None, the function will regard all err = 1. 
+            If errlst = None, the function will regard all err = 1.
             Defaults to None.
-        new_wave (np.ndarray, optional): the wavelength of the spectrum after the combination. 
-            If new_wave = None, wavelst[0] will be used as the base wavelength to rebin. 
+        new_wave (np.ndarray, optional): the wavelength of the spectrum after the combination.
+            If new_wave = None, wavelst[0] will be used as the base wavelength to rebin.
             Defaults to None.
         method (str, optional): The method of how to combine the spectra.
-            The methods include: 'weight', 'sum', 'mean', 'median'. 
+            The methods include: 'weight', 'sum', 'mean', 'median'.
             Defaults to 'weight'.
         reject (str, optional): How to reject the spectra when doing the combination.
             The values allowed include: 'minmax', '3sigma'. Defaults to None.
@@ -164,11 +168,11 @@ def scombine(wavelst, fluxlst, errlst=None, new_wave=None, method='weight', reje
         # nivarlst.append(1 / nerr)
     nfluxlst = np.array(nfluxlst)
     nerrlst = np.array(nerrlst)
-    if method == 'sum':
+    if method == "sum":
         sumflux = np.sum(nfluxlst, axis=0)
         sumerr = np.sqrt(np.sum(nerrlst**2, axis=0))
         return new_wave, sumflux, sumerr
-    if method == 'weight':
+    if method == "weight":
         sumflux = np.sum(nivarlst * nfluxlst, axis=0)
         sumweight = np.sum(nivarlst, axis=0)
         sumweight[sumweight == 0] = 1
@@ -190,8 +194,12 @@ def air2vac(wave):
     Returns:
         numpy.ndarray: the wavelength in vacuum
     """
-    coef = 6.4328e-5 + 2.94981e-2/(146-(1.0e4/wave)**2) + 2.554e-4/(41-(1.0e4/wave)**2)
-    return (1+coef) * wave
+    coef = (
+        6.4328e-5
+        + 2.94981e-2 / (146 - (1.0e4 / wave) ** 2)
+        + 2.554e-4 / (41 - (1.0e4 / wave) ** 2)
+    )
+    return (1 + coef) * wave
 
 
 def median_reject_cos(flux, size=21):
@@ -207,7 +215,7 @@ def median_reject_cos(flux, size=21):
     med_flux = median_filter(flux, size=size)
     res = flux - med_flux
     std = np.std(res)
-    arg = np.where(res > 3*std)
+    arg = np.where(res > 3 * std)
     new_flux = flux
     new_flux[arg] = med_flux[arg]
     return new_flux
@@ -228,7 +236,7 @@ def shift_wave(wave, shift):
     return newave
 
 
-def shift_wave_mutable(wave, arrpar, shifttype='velocity'):
+def shift_wave_mutable(wave, arrpar, shifttype="velocity"):
     """shift the wavelength, the delta_lambda can be different in each wave
 
     Args:
@@ -243,7 +251,7 @@ def shift_wave_mutable(wave, arrpar, shifttype='velocity'):
     tmpwave = wave / 10000
     for ind, val in enumerate(arrpar):
         waveshift = waveshift + (tmpwave**ind) * val
-    if shifttype == 'velocity':
+    if shifttype == "velocity":
         waveshift = waveshift * wave * 1000 / c
     newave = wave + waveshift
     return newave
@@ -288,8 +296,8 @@ def get_scale(wave, scalepar):
 
     Args:
         wave (numpy.ndarray): wavelength
-        scalepar (list like array): the coefficients of the Legendre polynomial, 
-          the format is like [1.0, -0.5, 0.25, -0.125], the length of scalepar 
+        scalepar (list like array): the coefficients of the Legendre polynomial,
+          the format is like [1.0, -0.5, 0.25, -0.125], the length of scalepar
           is the degree of Legendre polynomial
 
     Returns:
@@ -394,17 +402,14 @@ def spec_match(wave, flux, wave_ref, flux_ref, mask=None, degree=20):
     # return out
 
 
-def normalize_spec_gaussian_filter(wave, flux,
-                                 fwhm=100,
-                                 mask_windows=None,
-                                 plot=False):
+def normalize_spec_gaussian_filter(wave, flux, fwhm=100, mask_windows=None, plot=False):
     """normalize the spectrum using the gaussian filter method
 
     Args:
         wave (numpy.ndarray): wavelength of the spectrum
         flux (numpy.ndarray): flux of the spectrum
         fwhm (float, optional): the width of the gaussian kernel. Defaults to 50.
-        mask_windows (list)], optional): The mask windows before to do the normalization, which is in the format of 
+        mask_windows (list)], optional): The mask windows before to do the normalization, which is in the format of
         [
             [[mask_w1, mask_w2], [left_cont_w1, left_cont_w2], [right_cont_w1, right_cont_w2]],
             [[mask_w1, mask_w2], [left_cont_w1, left_cont_w2], [right_cont_w1, right_cont_w2]],
@@ -439,19 +444,28 @@ def normalize_spec_gaussian_filter(wave, flux,
                 if wcl < np.min(wave) or wcr > np.max(wave):
                     continue
                 w1, w2 = mask_win
-                plt.axvline(w1, linestyle=':', color='red')
-                plt.axvline(w2, linestyle=':', color='red')
+                plt.axvline(w1, linestyle=":", color="red")
+                plt.axvline(w2, linestyle=":", color="red")
                 w1, w2 = cont_win1
-                plt.axvline(w1, linestyle=':', color='blue')
-                plt.axvline(w2, linestyle=':', color='blue')
+                plt.axvline(w1, linestyle=":", color="blue")
+                plt.axvline(w2, linestyle=":", color="blue")
                 w1, w2 = cont_win2
-                plt.axvline(w1, linestyle=':', color='blue')
-                plt.axvline(w2, linestyle=':', color='blue')
+                plt.axvline(w1, linestyle=":", color="blue")
+                plt.axvline(w2, linestyle=":", color="blue")
         plt.show()
     return normflux
 
 
-def continuum(wave, flux, kernel='median', width=50, degree=7, plot=False, rejectemission=False, mask_window=None):
+def continuum(
+    wave,
+    flux,
+    kernel="median",
+    width=50,
+    degree=7,
+    plot=False,
+    rejectemission=False,
+    mask_window=None,
+):
     """reduce the spectrum continuum, and return the normalized flux
     after the continuum correction
 
@@ -461,8 +475,8 @@ def continuum(wave, flux, kernel='median', width=50, degree=7, plot=False, rejec
 
     Keyword Arguments:
         kernel {str, 'median' or 'gaussian'} -- the kernel used to smooth the input spectrum. (default: {'median'})
-        width {float} -- the width of the kernel, unit is AA. 
-                         if the kernel is 'median', width means the bin width of the median kernel; 
+        width {float} -- the width of the kernel, unit is AA.
+                         if the kernel is 'median', width means the bin width of the median kernel;
                          if the kernel is 'gaussian', the width means the gaussian kernel in the unit of FWHM.
                          (default: {50})
         degree {int} -- legendre Polynomials order used to fit the continuum (default: {5})
@@ -475,16 +489,16 @@ def continuum(wave, flux, kernel='median', width=50, degree=7, plot=False, rejec
     """
 
     if np.isfinite(wave.sum()) == False or np.isfinite(flux.sum()) == False:
-        raise ValueError('wave or flux is not finite')
-    if kernel == 'median':
+        raise ValueError("wave or flux is not finite")
+    if kernel == "median":
         wlength = wave[-1] - wave[0]
         ratio = width / wlength
         binsize = int(wave.size * ratio)
         smoothflux = median_filter(flux, binsize)
-    elif kernel == 'gaussian':
+    elif kernel == "gaussian":
         smoothflux = spec_filter.gaussian_filter_wavespace(wave, flux, width)
     else:
-        raise ValueError('kernel must be median or gaussian')
+        raise ValueError("kernel must be median or gaussian")
 
     if mask_window is not None:
         arg_mask = mask_wave(wave, mask_window)
@@ -500,8 +514,8 @@ def continuum(wave, flux, kernel='median', width=50, degree=7, plot=False, rejec
     popt = np.ones(ideg)
     arg_protect = np.zeros(logflux.size, dtype=bool)
     tmp_size = arg_protect.size
-    arg_protect[:int(tmp_size * 0.05)] = True
-    arg_protect[-int(tmp_size * 0.05):] = True
+    arg_protect[: int(tmp_size * 0.05)] = True
+    arg_protect[-int(tmp_size * 0.05) :] = True
     arg_sel = arg_mask
     while ideg < degree + 1:
         tmppopt, _ = curve_fit(func, logwave[arg_sel], logflux[arg_sel], p0=popt)
@@ -517,26 +531,34 @@ def continuum(wave, flux, kernel='median', width=50, degree=7, plot=False, rejec
             arg_instd = tmp_normflux - 1.0 > -3 * std
         arg_sel = (arg_instd | arg_protect) & arg_mask
 
-    tmpscale = 10**func(logwave, *popt)
+    tmpscale = 10 ** func(logwave, *popt)
 
     if plot is True:
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.plot(wave, flux, color='grey', label='original')
-        ax.plot(wave, smoothflux, color='blue', label='smooth')
-        ax.plot(wave, tmpscale, color='red', label='fit')
+        ax.plot(wave, flux, color="grey", label="original")
+        ax.plot(wave, smoothflux, color="blue", label="smooth")
+        ax.plot(wave, tmpscale, color="red", label="fit")
         arg_reject = np.where(arg_sel == False)
-        ax.plot(wave[arg_reject], flux[arg_reject], 'o', color='green', label='reject')
-        ax.plot(wave[arg_reject], smoothflux[arg_reject], 'o', color='orange', label='smooth reject')
+        ax.plot(wave[arg_reject], flux[arg_reject], "o", color="green", label="reject")
+        ax.plot(
+            wave[arg_reject],
+            smoothflux[arg_reject],
+            "o",
+            color="orange",
+            label="smooth reject",
+        )
         if mask_window is not None:
             yl, yr = ax.get_ylim()
             for ind, win in enumerate(mask_window):
                 if ind == 0:
-                    ax.fill_between(win, [yl, yl], [yr, yr], color='grey', alpha=0.3, label='mask window')
+                    ax.axvspan(
+                        win[0], win[1], color="grey", alpha=0.3, label="mask window"
+                    )
                 else:
-                    ax.fill_between(win, [yl, yl], [yr, yr], color='grey', alpha=0.3)
+                    ax.axvspan(win[0], win[1], color="grey", alpha=0.3)
             ax.set_ylim(yl, yr)
         ax.legend()
-        ax.set_title('kernel={}, width={}, degree={}'.format(kernel, width, degree))
+        ax.set_title("kernel={}, width={}, degree={}".format(kernel, width, degree))
         plt.show()
     return flux / tmpscale
