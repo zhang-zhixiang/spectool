@@ -3,6 +3,34 @@ from . import spec_func
 from . import spec_filter
 from . import convol
 from lmfit import Parameters
+from scipy.optimize import curve_fit
+
+
+def fit_scale_pars(wave1, flux1, wave2, flux2, degree=9):
+    """fit the scale parameters of two spectra
+
+    Args:
+        wave1 (_type_): _description_
+        flux1 (_type_): _description_
+        wave2 (_type_): _description_
+        flux2 (_type_): _description_
+        degree (int, optional): _description_. Defaults to 9.
+    """
+
+    def func(x, *par):
+        return np.array(convol.legendre_poly(x, par))
+
+    nflux2 = spec_func.rebin_padvalue(wave2, flux2, wave1)
+    norm_wave = spec_func.normalize_wave(wave1)
+    profile = nflux2 / flux1
+    pars = [1.0]
+    ideg = 1
+    while ideg < degree + 1:
+        tmppopt, _ = curve_fit(func, norm_wave, profile, p0=pars)
+        ideg = ideg + 1
+        pars = np.zeros(ideg)
+        pars[:-1] = tmppopt
+    return pars[:-1]
 
 
 def get_scale_model(degree=15):

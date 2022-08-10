@@ -456,6 +456,45 @@ def normalize_spec_gaussian_filter(wave, flux, fwhm=100, mask_windows=None, plot
     return normflux
 
 
+def fit_profile_par(wave, flux, degree=7, mask_windows=None):
+    """fit the profile parameters of the continuum of the spectrum, 
+       where the profile is a legendre polynomial
+    Args:
+        wave (numpy.ndarray): wavelength of the spectrum
+        flux (numpy.ndarray): flux of the spectrum
+        degree (int, optional): the degree of the legendre polynomial. 
+                                Defaults to 7.
+        mask_windows (list)], optional): The mask windows before to fit 
+                                         the profile, which is in the 
+                                         format of
+                                        [
+                                            [mask_w1, mask_w2],
+                                            [mask_w1, mask_w2],
+                                            ...
+                                        ]. Defaults to None.
+    Returns:
+        list: the profile parameters of the spectrum
+    """
+
+    def func(x, *par):
+        return np.array(convol.legendre_poly(x, par))
+
+    norm_wave = normalize_wave(wave)
+    if mask_windows is not None:
+        arg = mask_wave(norm_wave, mask_windows)
+        norm_wave = norm_wave[arg]
+        nflux = flux[arg]
+    else:
+        nflux = flux
+    popt = [1]
+    for ideg in range(1, degree + 1):
+        tmpopt, pcov = curve_fit(func, norm_wave, ydata=nflux, p0=popt)
+        popt = np.zeros(ideg + 1)
+        popt[:-1] = tmpopt
+    popt, pcov = curve_fit(func, norm_wave, ydata=nflux, p0=popt)
+    return popt
+
+
 def continuum(
     wave,
     flux,
