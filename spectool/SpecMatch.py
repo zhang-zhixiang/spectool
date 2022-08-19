@@ -1,9 +1,180 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from . import spec_func
 from . import spec_filter
 from . import convol
-from lmfit import Parameters
+from . import ccf
+from lmfit import Parameters, Minimizer, report_fit, minimize
 from scipy.optimize import curve_fit
+
+
+import spectool
+
+
+class SpecMatch:
+    def __init__(self, wave=None, flux=None, ivar=None, wave_temp=None, flux_temp=None, masks=None, degree_fwhm=2, degree_scale=9):
+        self.set_spec(wave, flux, ivar)
+        self.set_temp(wave_temp, flux_temp)
+        self.set_masks(masks)
+        self.set_degree_fwhm(degree_fwhm)
+        self.set_degree_scale(degree_scale)
+
+    def set_spec(self, wave, flux, ivar):
+        self.wave = wave
+        self.flux = flux
+        self.ivar = ivar
+        if wave is not None and flux is not None and ivar is None:
+            self.ivar = np.ones(flux.shape)
+        if wave is not None:
+            self.norm_wave = spec_func.normalize_wave(wave)
+        else:
+            self.norm_wave = None
+
+    def set_temp(self, wave_temp, flux_temp):
+        self.wave_ref = wave_temp
+        self.flux_ref = flux_temp
+
+    def set_masks(self, masks):
+        self.masks = masks
+
+    def set_degree_fwhm(self, degree_fwhm):
+        self.degree_fwhm = degree_fwhm
+        self.parName_fwhms = []
+        for ind in range(degree_fwhm):
+            self.parName_fwhms.append('fwhm%d' % ind)
+
+    def set_degree_scale(self, degree_scale):
+        self.degree_scale = degree_scale
+        self.parName_scales = []
+        for ind in range(degree_scale+1):
+            self.parName_scales.append('scale%d' % ind)
+
+    def measure_velocity(self, degree=5, plot=False, broad_ref=500):
+        if broad_ref is not None:
+            # print('wave_ref =', self.wave_ref)
+            # print('flux_ref =', self.flux_ref)
+            # print('broad_ref =', broad_ref)
+            flux_tmp = spec_filter.gaussian_filter(self.wave_ref, self.flux_ref, broad_ref)
+        else:
+            flux_tmp = self.flux_ref
+        vel = ccf.find_radial_velocity2(self.wave, 
+                                                 self.flux, 
+                                                 self.wave_ref, 
+                                                 flux_tmp,
+                                                 maskwindow=self.masks,
+                                                 degree=degree,
+                                                 plot=plot
+                                                )
+        self.RV = vel
+        self.wave_ref_shift = spec_func.shift_wave(self.wave_ref, vel)
+        self.flux_ref_rebin = np.array(spec_func.rebin.rebin_padvalue(self.wave_ref_shift, self.flux_ref, self.wave))
+        if plot is True:
+            plt.show()
+        return vel
+
+    def get_velocity(self):
+        return self.RV
+
+    def get_fwhmlst(self, pars):
+        parfwhm = [pars[val].value for val in self.parName_fwhms]
+        ret = np.zeros(self.norm_wave.shape)
+        for ind in range(self.degree_fwhm):
+            ret += parfwhm[ind] * np.power(self.norm_wave, ind)
+        ret[ret < 0] = 1.0
+        return ret
+
+    def get_scale_arr(self, pars=None):
+        if pars is None:
+            pars = self.pars_fitresult
+        parscale = [pars[val].value for val in self.parName_scales]
+        scale = np.array(spec_func.legendre_polynomial(self.norm_wave, parscale))
+        return scale
+
+    def get_modified_temp(self, pars):
+        fwhm = self.get_fwhmlst(pars)
+        scale = self.get_scale_arr(pars)
+        if hasattr(self, 'flux_ref_rebin'):
+            flux_tmp = self.flux_ref_rebin
+        else:
+            flux_tmp = spec_func.rebin.rebin_padvalue(self.wave_ref, self.flux_ref, self.wave)
+        nflux_tmp = spec_filter.gauss_filter_mutable(self.wave, flux_tmp, fwhm)
+        nflux_tmp = nflux_tmp * scale
+        return nflux_tmp
+
+    def get_residual(self, pars):
+        y_model = self.get_modified_temp(pars)
+        out = (self.flux - y_model) * self.ivar
+        if self.masks is not None:
+            arg = spec_func.mask_wave(self.wave, self.masks)
+            out = out[arg]
+        return out
+
+    def match(self):
+        pars = Parameters()
+        for ind, val in enumerate(self.parName_fwhms):
+            if ind == 0:
+                pars.add(val, value=800, min=-3000, max=3000)
+            else:
+                pars.add(val, value=10, min=-3000, max=3000)
+        # flux_ref_rebin = spectool.rebin.rebin_padvalue(self.wave_ref, self.flux_ref, self.wave)
+        # arg = flux_ref_rebin == 0
+        # print(flux_ref_rebin[arg])
+        # arg = self.flux == 0
+        # print(self.flux[arg])
+        # print('+'*30)
+        # flux_ratio = self.flux / flux_ref_rebin
+        # ini_scale_pars = spectool.spec_func.fit_profile_par(self.wave, flux_ratio, degree=self.degree_scale)
+        for ind, val in enumerate(self.parName_scales):
+            pars.add(val, value=(-0.5)**ind)
+            # pars.add(val, value=ini_scale_pars[ind])
+        self.measure_velocity()
+        minner = Minimizer(self.get_residual, pars)
+        result = minner.minimize()
+        self.fit_result = result
+        self.pars_fitresult = result.params
+        self.chisq = result.chisqr
+
+    def report_fit_result(self):
+        report_fit(self.fit_result)
+
+    def get_chisq(self):
+        if hasattr(self, 'chisq'):
+            return self.chisq
+
+    def get_fit_flux(self):
+        return self.get_modified_temp(self.pars_fitresult)
+
+    def plot_fitted_spec(self, outname=None, fig=None):
+        if fig is None:
+            fig = plt.figure(figsize=(12, 8))
+        else:
+            fig.clf()
+        ax = fig.add_subplot(111)
+        ax.plot(self.wave, self.flux, 'k', label='data')
+        ax.plot(self.wave, self.get_fit_flux(), 'r', label='template', linewidth=1)
+        if self.masks is not None:
+            for win in self.masks:
+                ax.axvspan(win[0], win[1], color='gray', alpha=0.3)
+        plt.legend()
+        if outname is not None:
+            plt.savefig(outname)
+        # plt.show()
+
+    def plot_fwhm(self, outname=None):
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(self.wave, self.get_fwhmlst(self.pars_fitresult))
+        if outname is not None:
+            plt.savefig(outname)
+        # plt.show()
+
+    def plot_scale(self, outname=None):
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(self.wave, self.get_scale_arr(self.pars_fitresult))
+        if outname is not None:
+            plt.savefig(outname)
+        # plt.show()
 
 
 def fit_scale_pars(wave1, flux1, wave2, flux2, degree=9):
