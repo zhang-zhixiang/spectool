@@ -12,11 +12,11 @@ import spectool
 
 
 class SpecMatch:
-    def __init__(self, wave=None, flux=None, ivar=None, wave_temp=None, flux_temp=None, masks=None, degree_fwhm=2, degree_scale=9):
+    def __init__(self, wave=None, flux=None, ivar=None, wave_temp=None, flux_temp=None, masks=None, degree_fwhm=2, expect_fwhm=None, degree_scale=9):
         self.set_spec(wave, flux, ivar)
         self.set_temp(wave_temp, flux_temp)
         self.set_masks(masks)
-        self.set_degree_fwhm(degree_fwhm)
+        self.set_degree_fwhm(degree_fwhm, expect_fwhm)
         self.set_degree_scale(degree_scale)
 
     def set_spec(self, wave, flux, ivar):
@@ -37,11 +37,13 @@ class SpecMatch:
     def set_masks(self, masks):
         self.masks = masks
 
-    def set_degree_fwhm(self, degree_fwhm):
+    def set_degree_fwhm(self, degree_fwhm, expect_fwhm=None):
         self.degree_fwhm = degree_fwhm
         self.parName_fwhms = []
         for ind in range(degree_fwhm):
             self.parName_fwhms.append('fwhm%d' % ind)
+        if expect_fwhm is not None:
+            self.expect_fwhm = expect_fwhm
 
     def set_degree_scale(self, degree_scale):
         self.degree_scale = degree_scale
@@ -90,6 +92,11 @@ class SpecMatch:
         scale = np.array(spec_func.legendre_polynomial(self.norm_wave, parscale))
         return scale
 
+    def get_scale_par(self):
+        pars = self.pars_fitresult
+        parscale = [pars[val].value for val in self.parName_scales]
+        return parscale
+
     def get_modified_temp(self, pars):
         fwhm = self.get_fwhmlst(pars)
         scale = self.get_scale_arr(pars)
@@ -113,7 +120,11 @@ class SpecMatch:
         pars = Parameters()
         for ind, val in enumerate(self.parName_fwhms):
             if ind == 0:
-                pars.add(val, value=800, min=-3000, max=3000)
+                if self.expect_fwhm is not None:
+                    fwhm = self.expect_fwhm
+                else:
+                    fwhm = 300
+                pars.add(val, value=fwhm, min=-3000, max=3000)
             else:
                 pars.add(val, value=10, min=-3000, max=3000)
         # flux_ref_rebin = spectool.rebin.rebin_padvalue(self.wave_ref, self.flux_ref, self.wave)
