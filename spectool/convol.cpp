@@ -297,35 +297,6 @@ VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profi
   return new_out;
 }
 
-// VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profile){
-//   auto [new_wave, new_flux, left_margin] = add_margin(wave, flux, velocity);
-//   // new_wave = wave;
-//   // new_flux = flux;
-//   // left_margin = 0;
-//   VEC out(new_flux.size());
-//   VEC lambda_arr(velocity.size());
-//   CVEC width_VEC = _get_width(new_wave);
-//   to_zero(out);
-//   for(int ind=0; ind< new_wave.size(); ++ind){
-//     double w = new_wave[ind];
-//     vel_to_lambda(velocity, w, lambda_arr);
-//     VEC outprofile = rebin(lambda_arr, profile, new_wave);
-//     double sumflux = _sum_flux(outprofile.begin(), outprofile.end(), width_VEC.begin());
-//     if (sumflux == 0){
-//       out[ind] = new_flux[ind];
-//     } else {
-//       double intflux = width_VEC[ind] * new_flux[ind];
-//       for(auto & val : outprofile) val *= intflux/sumflux;
-//       for(int j = 0; j < out.size(); ++j) out[j] += outprofile[j];
-//     }
-//   }
-//   auto from = out.begin() + left_margin;
-//   auto end = from + wave.size();
-//   VEC new_out(from, end);
-//   return new_out;
-// }
-
-
 auto add_cap(CVEC& wave, CVEC& flux, double sigma){
   std::deque<double> nwave(wave.begin(), wave.end());
   std::deque<double> nflux(flux.begin(), flux.end());
