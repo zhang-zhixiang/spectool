@@ -163,6 +163,8 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     logwave = np.log(wave)
     logwave_ref = np.log(wave_ref)
     log_delta_w = np.min(np.diff(logwave))
+    if log_delta_w < 0.1 / c:
+        log_delta_w = 0.1 / c
     logwbegin = min(logwave[0], logwave_ref[0])
     logwend = max(logwave[-1], logwave_ref[-1])
     lognewave = np.arange(logwbegin, logwend, log_delta_w)
