@@ -282,7 +282,7 @@ VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profi
     while(new_wave[ind_begin] < lambda_arr[0]) ++ind_begin;
     int ind_end = ind;
     while (ind_end < new_wave.size() && new_wave[ind_end] < lambda_arr[lambda_arr.size()-1]) ++ind_end;
-    to_zero(outprofile);
+    // to_zero(outprofile);
     interp_linear(lambda_arr.data(), profile_norm.data(), lambda_arr.size(), new_wave.data()+ind_begin, outprofile.data()+ind_begin, ind_end-ind_begin);
     double sumflux = _sum_flux(outprofile.begin()+ind_begin, outprofile.begin()+ind_end, width_VEC.begin()+ind_begin);
     if (sumflux != 0){
