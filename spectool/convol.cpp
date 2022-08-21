@@ -177,12 +177,12 @@ VEC gauss_filter_mutable(CVEC& wave,
 
 VEC _get_width(CVEC& wave){
   VEC out(wave.size());
-  for(int ind = 1; ind < wave.size() - 1; ++ind){
-    out[ind] = (wave[ind+1] - wave[ind-1]) / 2.0;
+  for(int ind = 1; ind < wave.size(); ++ind){
+    out[ind] = (wave[ind] - wave[ind-1]);
   }
   out[0] = wave[1] - wave[0];
-  const int last = wave.size() - 1;
-  out[last] = wave[last] - wave[last-1];
+  // const int last = wave.size() - 1;
+  // out[last] = wave[last] - wave[last-1];
   return out;
 }
 
@@ -238,131 +238,57 @@ auto add_margin(CVEC& wave, CVEC& flux, CVEC& velocity){
   return std::make_tuple(out_wave, out_flux, left_margin);
 }
 
-auto get_int_profile(CVEC& wave, CVEC& flux){
-  VEC out_wave(flux.size()+1);
-  for(int ind = 0; ind < wave.size(); ++ind) out_wave[ind+1] = wave[ind];
-  out_wave[0] = 2*wave[0] - wave[1];
-  VEC out_flux(flux.size()+1);
-  out_flux[0] = 0;
-  for(int ind = 0; ind < flux.size(); ++ind) out_flux[ind+1] = (out_wave[ind+1] - out_wave[ind]) * flux[ind];
-  for(int ind = 1; ind < out_flux.size(); ++ind) out_flux[ind] += out_flux[ind-1];
-  return std::make_tuple(out_wave, out_flux);
+template<typename IT>
+void print(IT first, IT end){
+  for (auto it = first; it != end; ++it)
+    std::cout << *it << " ";
+  std::cout << std::endl;
 }
 
-// template<typename IT>
-// void print(IT first, IT end){
-//   for (auto it = first; it != end; ++it)
-//     std::cout << *it << " ";
-//   std::cout << std::endl;
-// }
-
-template<typename IT1, typename IT2>
-void myinterp(IT1 iw1, IT1 if1, int size1, IT1 iw2, IT2 if2, int size2){
-  auto iw1_end = iw1 + size1;
-  auto if1_end = if1 + size1;
-  auto iw2_end = iw2 + size2;
-  auto if2_end = if2 + size2;
-
-  // print(iw1, iw1_end);
-  // std::cout << "size1 = " << size1 << std::endl;
-  // print(if1, if1_end);
-  // std::cout << "size2 = " << size2 << std::endl;
-
-  const double w1_first = iw1[0];
-  const double w1_last = iw1[size1-1];
-  const double f1_first = if1[0];
-  const double f1_last = if1[size1-1];
-
-  const double left_width = iw2[1] - iw2[0];
-  const double left_edge = iw2[0] - left_width;
-  double left_flux;
-  if(left_edge < *iw1) left_flux = 0;
-  else if (left_edge >= w1_last) left_flux = f1_last;
-  else{
-    auto myfrom = lower_bound(iw1, iw1_end, left_edge);
-    int ss = myfrom - iw1;
-    double slop = (if1[ss+1] - if1[ss]) / (iw1[ss+1] - iw1[ss]);
-    double length = left_edge - iw1[ss];
-    left_flux = if1[ss] + slop * length;
+void interp_linear(double * wave, double * flux, int size1, double * new_wave, double * new_flux, int size2){
+  // You should ensure that the new_wave is within the range of wave. wave and new_wave should be sorted.
+  int indl = 0;
+  int indr = 0;
+  for(int ind = 0; ind < size2; ++ind){
+    while(wave[indl+1] < new_wave[ind]) indl++;
+    while(wave[indr] < new_wave[ind]) indr++;
+    if(indl == indr) new_flux[ind] = flux[indl];
+    else{
+      double slope = (flux[indr] - flux[indl]) / (wave[indr] - wave[indl]);
+      double length = new_wave[ind] - wave[indl];
+      new_flux[ind] = flux[indl] + slope*length;
+    }
   }
-
-  int ind = 0;
-  auto iw = iw1;
-  auto iff = if1;
-  // std::cout << "flag 3" << std::endl;
-  while(iw2[ind] < w1_first && ind < size2) if2[ind++] = 0;
-  while(iw2[ind] < w1_last && ind < size2){
-    while(*(iw+1) < iw2[ind]) {iw++; iff++;}
-    double slope = (*(iff+1) - *iff) / (*(iw+1) - *iw);
-    double length = iw2[ind] - *iw;
-    double tmpflux = *iff + slope*length;
-    if2[ind] = tmpflux;
-    ind++;
-  }
-  while(ind < size2) if2[ind++] = f1_last;
-
-  // std::cout << "flag 4" << std::endl;
-
-  auto new_iw = iw2_end - 1;
-  for(auto itr = if2_end - 1; itr != if2; --itr){
-    *itr -= *(itr-1);
-    double width = *new_iw - *(new_iw - 1);
-    // std::cout << "width = " << width << std::endl;
-    *itr /= width;
-    new_iw--;
-  }
-  if2[0] -= left_flux;
-  if2[0] /= left_width;
-  // std::cout << "end flag" << std::endl;
-}
-
-// void print(CVEC& arr){
-//   for (auto val : arr){
-//     std::cout << val << " ";
-//   }
-//   std::cout << std::endl;
-// }
-
-auto rebin_special(CVEC& wave, CVEC& intflux, CVEC& new_wave, VEC& new_flux){
-  auto iw1 = wave.begin();
-  auto if1 = intflux.begin();
-  int size1 = wave.size();
-  auto iw2 = lower_bound(new_wave.begin(), new_wave.end(), wave.front());
-  auto iw2_end = upper_bound(new_wave.begin(), new_wave.end(), wave.back());
-  int size2 = iw2_end - iw2;
-  int first_num = iw2 - new_wave.begin();
-  auto if2 = new_flux.begin() + first_num;
-  // std::cout << "first_num = " << first_num << " first_num+size2 = " << first_num+size2 <<std::endl;
-  myinterp(iw1, if1, size1, iw2, if2, size2);
-  return std::make_tuple(first_num, first_num+size2);
 }
 
 VEC filter_use_given_profile(CVEC& wave, CVEC& flux, CVEC& velocity, CVEC& profile){
   auto [new_wave, new_flux, left_margin] = add_margin(wave, flux, velocity);
-  // print(new_wave);
-  // print(new_flux);
-  auto [velocity_wle, intflux] = get_int_profile(velocity, profile);
-  // new_wave = wave;
-  // new_flux = flux;
-  // left_margin = 0;
   VEC out(new_flux.size());
   VEC outprofile(new_flux.size());
-  VEC lambda_arr(velocity_wle.size());
+  // VEC lambda_arr(velocity_wle.size());
+  VEC lambda_arr(velocity.size());
+  vel_to_lambda(velocity, new_wave[0], lambda_arr);
   CVEC width_VEC = _get_width(new_wave);
   to_zero(out);
 
+  double max_value = *max_element(profile.begin(), profile.end());
+  VEC profile_norm(profile.size());
+  for(int ind = 0; ind < profile.size(); ++ind) profile_norm[ind] = profile[ind] / max_value;
   for(int ind=0; ind< new_wave.size(); ++ind){
     double w = new_wave[ind];
-    vel_to_lambda(velocity_wle, w, lambda_arr);
-    // VEC outprofile = rebin(lambda_arr, profile, new_wave);
-    // std::cout << "flag 1" << std::endl;
-    auto [ind_begin, ind_end] = rebin_special(lambda_arr, intflux, new_wave, outprofile);
-    // std::cout << "flag 2" << std::endl;
+    vel_to_lambda(velocity, w, lambda_arr);
+    int ind_begin = ind;
+    while (ind_begin > 0 && new_wave[ind_begin] > lambda_arr[0]) --ind_begin;
+    while(new_wave[ind_begin] < lambda_arr[0]) ++ind_begin;
+    int ind_end = ind;
+    while (ind_end < new_wave.size() && new_wave[ind_end] < lambda_arr[lambda_arr.size()-1]) ++ind_end;
+    to_zero(outprofile);
+    interp_linear(lambda_arr.data(), profile_norm.data(), lambda_arr.size(), new_wave.data()+ind_begin, outprofile.data()+ind_begin, ind_end-ind_begin);
     double sumflux = _sum_flux(outprofile.begin()+ind_begin, outprofile.begin()+ind_end, width_VEC.begin()+ind_begin);
     if (sumflux != 0){
       double intflux = width_VEC[ind] * new_flux[ind];
-      for(int ind_tmp = ind_begin; ind_tmp < ind_end; ++ind_tmp) outprofile[ind_tmp] *= intflux/sumflux;
-      for(int ind_tmp = ind_begin; ind_tmp < ind_end; ++ind_tmp) out[ind_tmp] += outprofile[ind_tmp];
+      double ratio = intflux / sumflux;
+      for(int ind_tmp = ind_begin; ind_tmp < ind_end; ++ind_tmp) out[ind_tmp] += outprofile[ind_tmp] * ratio;
     }
   }
   auto from = out.begin() + left_margin;
