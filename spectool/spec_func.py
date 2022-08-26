@@ -493,7 +493,7 @@ def fit_profile_par(wave, flux, degree=7, mask_windows=None):
 
     norm_wave = normalize_wave(wave)
     if mask_windows is not None:
-        arg = mask_wave(norm_wave, mask_windows)
+        arg = mask_wave(wave, mask_windows)
         norm_wave = norm_wave[arg]
         nflux = flux[arg]
     else:
