@@ -42,8 +42,7 @@ class SpecMatch:
         self.parName_fwhms = []
         for ind in range(degree_fwhm):
             self.parName_fwhms.append('fwhm%d' % ind)
-        if expect_fwhm is not None:
-            self.expect_fwhm = expect_fwhm
+        self.expect_fwhm = expect_fwhm
 
     def set_degree_scale(self, degree_scale):
         self.degree_scale = degree_scale
