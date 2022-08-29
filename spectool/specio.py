@@ -121,9 +121,16 @@ def read_lamost_low(fn):
 
 def read_lamost_med(fn, hduid):
     data = fits.getdata(fn, ext=hduid)
-    wave = 10**data['loglam'].astype('float64')
     flux = data['flux'].astype('float64')
-    invar = data['IVAR'].astype('float64')
+    if len(flux.shape) == 2:
+        wave = data['WAVELENGTH'].astype('float64')
+        invar = data['IVAR'].astype('float64')
+        wave = wave[0, :]
+        flux = flux[0, :]
+        invar = invar[0, :]
+    else:
+        wave = 10**data['loglam'].astype('float64')
+        invar = data['IVAR'].astype('float64')
     arg = invar == 0.0
     invar[arg] = 1.0
     invar2 = invar**0.5
