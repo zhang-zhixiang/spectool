@@ -64,6 +64,116 @@ def get_FWHM(wave, flux, winl, winr, plot=False):
     return fwhm
 
 
+def get_mean_with_err(sample, sample_err=None):
+    """get the mean value of a sample
+
+    Args:
+        sample (ndarray): the sample
+        sample_err (ndarray, optional): the errors of the sample. Defaults to None.
+
+    Returns:
+        mean_value, mean_value_err: the mean value and error
+    """
+    mean_value = np.mean(sample)
+    std = np.std(sample)
+    if sample_err is None:
+        sigma_new = std
+    else:
+        mean_sigma = np.mean(sample_err)
+        if mean_sigma  < std:
+            sigma_sys = np.sqrt(std**2 - mean_sigma**2)
+            sigma_new = np.sqrt(sample_err**2 + sigma_sys**2)
+        else:
+            sigma_new = sample_err
+    N = len(sample)
+    nerr = np.sqrt(np.sum(sigma_new**2)/N)
+    return mean_value, nerr
+
+
+def get_flux(wave, flux, err, wcl, wcr, wl, plot=False, ax=None):
+    """measure the flux of a line in a spectrum
+
+    Args:
+        wave (ndarray): wavelength of a spectrum
+        flux (ndarray): flux of a spectrum
+        err (ndarray): error of a spectrum
+        wcl ([[wcl1, wcl2]]): left continuum window
+        wcr ([[wcr1, wcr2]]): right continuum window
+        wl ([[wl1, wl2]]): line window
+        plot (bool, optional): whether plot the flux measurement. Defaults to False.
+        ax (axes, optional): the axes object used to plot. Defaults to None.
+
+    Returns:
+        fl, fl_err, fcl, fcl_err, fcr, fcr_err: the measurement results 
+                                                (emission line flux, 
+                                                 emission line flux err, 
+                                                 left continuum flux, 
+                                                 left continuum flux err, 
+                                                 right continuum flux, 
+                                                 right continuum flux err)
+    """
+    argl = select_wave(wave, wcl)
+    argr = select_wave(wave, wcr)
+    arge = select_wave(wave, wl)
+    x0 = np.median(wave[argl])
+    y0 = np.median(flux[argl])
+    x1 = np.median(wave[argr])
+    y1 = np.median(flux[argr])
+    k = (y1 - y0) / (x1 - x0)
+    cont = y0 + (wave - x0) * k
+    widths = get_delta_wave(wave)
+    # wave_line = wave[arge]
+    flux_line = flux[arge]
+    cont_line = cont[arge]
+    widths_line = widths[arge]
+    sumflux = np.sum((flux_line - cont_line) * widths_line)
+    _, err_cl = get_mean_with_err(flux[argl], err[argl])
+    _, err_cr = get_mean_with_err(flux[argr], err[argr])
+    err_1 = np.sqrt(np.sum((widths_line * err[arge])**2))
+
+    allw = x1 - x0
+    w1 = wl[0][0] - x0
+    w2 = wl[0][1] - wl[0][0]
+    w3 = x1 - wl[0][1]
+    err_2 = (w2+2*w3) / allw / 2 * w2 * err_cl
+    err_3 = (2*w1+w2) / allw / 2 * w2 * err_cr
+
+    err_line = np.sqrt(err_1**2 + err_2**2 + err_3**2)
+
+    if plot is True:
+        # print('err_1 =', err_1)
+        # print('err_2 =', err_2)
+        # print('err_3 =', err_3)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        ax = plt.gca()
+        w1 = wcl[0][0]
+        w2 = wcr[0][1]
+        width = w2 - w1
+        wlb = w1 - 0.1 * width
+        wrb = w2 + 0.1 * width
+        arg = select_wave(wave, [[wlb, wrb]])
+        wave_sel = wave[arg]
+        flux_sel = flux[arg]
+        err_sel = err[arg]
+        arg_cont = select_wave(wave, [[x0, x1]])
+        cont_cont = cont[arg_cont]
+        wave_cont = wave[arg_cont]
+        ax.errorbar(wave_sel, flux_sel, yerr=err_sel, color='black')
+        ax.plot(wave_cont, cont_cont, linestyle='--', color='C0')
+        ax.axvline(wcl[0][0], linestyle=':', color='C2')
+        ax.axvline(wcl[0][1], linestyle=':', color='C2')
+        ax.axvline(wcr[0][0], linestyle=':', color='C2')
+        ax.axvline(wcr[0][1], linestyle=':', color='C2')
+        ax.axvline(wl[0][0], linestyle='-.', color='blue')
+        ax.axvline(wl[0][1], linestyle='-.', color='blue')
+        ax.scatter(x0, y0, s=80, color='red')
+        ax.scatter(x1, y1, s=80, color='red')
+
+    return sumflux, err_line, y0, err_cl, y1, err_cr
+
+
 def get_linear_continuum(wave, flux, win1, win2):
     """get a linear continuum from the spectrum
 
