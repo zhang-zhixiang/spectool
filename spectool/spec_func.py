@@ -77,16 +77,16 @@ def get_mean_with_err(sample, sample_err=None):
     mean_value = np.mean(sample)
     std = np.std(sample)
     if sample_err is None:
-        sigma_new = std
+        sigma_new = std * np.ones(sample.shape)
     else:
         mean_sigma = np.mean(sample_err)
-        if mean_sigma  < std:
+        if mean_sigma < std:
             sigma_sys = np.sqrt(std**2 - mean_sigma**2)
             sigma_new = np.sqrt(sample_err**2 + sigma_sys**2)
         else:
             sigma_new = sample_err
     N = len(sample)
-    nerr = np.sqrt(np.sum(sigma_new**2)/N)
+    nerr = np.sqrt(np.sum(sigma_new**2)) / N
     return mean_value, nerr
 
 
