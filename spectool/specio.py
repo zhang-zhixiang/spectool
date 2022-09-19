@@ -28,7 +28,8 @@ def read_iraf_spec(fn, aper=1):
     size = head['NAXIS1']
     step = head['CD1_1']
     start = head['CRVAL1']
-    wave = np.arange(size) * step + start
+    crpix1 = head['CRPIX1']
+    wave = (np.arange(size) + 1.0 - crpix1) * step + start
     if len(data.shape) == 2:
         flux = data[0, :]
         err = data[1, :]
