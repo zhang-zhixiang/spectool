@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 from astropy.io import fits
 from PyAstronomy.pyasl import read1dFitsSpec
@@ -40,7 +41,7 @@ def read_iraf_spec(fn, aper=1):
     return wave, flux, err
 
 
-def read_iraf_echell(fn):
+def read_iraf_echelle(fn):
     """read the spectra file created by iraf package echell,
     Caution: this is a temporary implementation, waiting for the
     support from specutils
@@ -51,34 +52,36 @@ def read_iraf_echell(fn):
     Returns:
         [[wave, flux], [wave, flux],...]: A spectra list
     """
-    from pyraf import iraf
-    import tempfile
-    tmpdir = tempfile.gettempdir()
-    hdul = fits.open(fn)
-    dim = hdul[0].data.shape[0]
-    iraf.onedspec()
-    outlst = []
-    for ind in range(1, dim+1):
-        inname = fn + '[*,%d]' % ind
-        basename, ext = os.path.splitext(fn)
-        name = ''.join([basename, str(ind), ext])
-        outname = os.sep.join([tmpdir, name])
-        outtxtname = os.path.splitext(outname)[0] + '.txt'
-        if not os.path.isfile(outname) or not os.path.isfile(outtxtname):
-            if os.path.isfile(outname):
-                os.remove(outname)
-            if os.path.isfile(outtxtname):
-                os.remove(outtxtname)
-            iraf.scopy(inname, outname)
-            iraf.wspectext(outname, outtxtname, header='No')
-        data = np.loadtxt(outtxtname)
-        wave = data[:, 0]
-        flux = data[:, 1]
-        arg = np.argsort(wave)
-        wave = wave[arg]
-        flux = flux[arg]
-        outlst.append([wave, flux])
-    return outlst
+    # from pyraf import iraf
+    # import tempfile
+    fit = fits.open(fn)
+    head = fit[0].header
+    data = fit[0].data
+    ind = 1
+    wtext = ''
+    while True:
+        keyname = 'WAT2_{:03}'.format(ind)
+        if keyname in head:
+            keytext = head[keyname]
+            if len(keytext) < 68:
+                size_space = 68 - len(keytext)
+                keytext = keytext + ' ' * size_space
+            wtext = wtext + keytext
+        else:
+            break
+        ind = ind + 1
+    lis = re.findall(r'"(.+?)"', wtext)
+    # specnames = re.findall(r'spec.{1,3}=', wtext)
+    specs = []
+    for ind, line in enumerate(lis):
+        flux = data[ind].astype(float)
+        lines = line.split()
+        wbegin = float(lines[3])
+        step = float(lines[4])
+        size = int(lines[5])
+        wave = np.arange(size) * step + wbegin
+        specs.append((wave, flux))
+    return specs
 
 
 def read_lte_spec(fn):
