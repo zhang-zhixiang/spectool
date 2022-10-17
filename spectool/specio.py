@@ -74,7 +74,10 @@ def read_iraf_echelle(fn):
     # specnames = re.findall(r'spec.{1,3}=', wtext)
     specs = []
     for ind, line in enumerate(lis):
-        flux = data[ind].astype(float)
+        if len(data.shape) == 2:
+            flux = data[ind].astype(float)
+        else:
+            flux = data[0, ind].astype(float)
         lines = line.split()
         wbegin = float(lines[3])
         step = float(lines[4])
