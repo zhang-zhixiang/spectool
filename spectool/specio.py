@@ -51,6 +51,8 @@ def read_iraf_echelle(fn):
 
     Returns:
         [[wave, flux], [wave, flux],...]: A spectra list
+        if the fits file contains sigma information, then return
+        [[wave, flux, sigma], [wave, flux, sigma],...]
     """
     # from pyraf import iraf
     # import tempfile
@@ -78,12 +80,16 @@ def read_iraf_echelle(fn):
             flux = data[ind].astype(float)
         else:
             flux = data[0, ind].astype(float)
+            sigma = data[3, ind].astype(float)
         lines = line.split()
         wbegin = float(lines[3])
         step = float(lines[4])
         size = int(lines[5])
         wave = np.arange(size) * step + wbegin
-        specs.append((wave, flux))
+        if len(data.shape) == 2:
+            specs.append((wave, flux))
+        else:
+            specs.append((wave, flux, sigma))
     return specs
 
 
