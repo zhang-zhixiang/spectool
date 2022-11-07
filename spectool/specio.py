@@ -43,8 +43,6 @@ def read_iraf_spec(fn, aper=1):
 
 def read_iraf_echelle(fn):
     """read the spectra file created by iraf package echell,
-    Caution: this is a temporary implementation, waiting for the
-    support from specutils
 
     Args:
         fn (fitname): fits name 
@@ -78,15 +76,20 @@ def read_iraf_echelle(fn):
     for ind, line in enumerate(lis):
         if len(data.shape) == 2:
             flux = data[ind].astype(float)
+            sigma = None
         else:
+            shape = data.shape
             flux = data[0, ind].astype(float)
-            sigma = data[3, ind].astype(float)
+            if shape[0] < 4:
+                sigma = None
+            else:
+                sigma = data[3, ind].astype(float)
         lines = line.split()
         wbegin = float(lines[3])
         step = float(lines[4])
         size = int(lines[5])
         wave = np.arange(size) * step + wbegin
-        if len(data.shape) == 2:
+        if sigma is None:
             specs.append((wave, flux))
         else:
             specs.append((wave, flux, sigma))
@@ -103,33 +106,28 @@ def read_lte_spec(fn):
 
 
 def read_lamost_low(fn):
-    # fit = fits.open(fn)
-    # first = fit[0].header['CRVAL1']
-    # step = fit[0].header['CD1_1']
-    # length = fit[0].header['NAXIS1']
-    # logwave = np.arange(length)*step + first
-    # wave = 10**logwave
-    # flux = fit[0].data[0, :]
-    # data = fit[0].data
-    # invar = data[1, :].astype('float64')
-    # arg = np.where(invar == 0)
-    # invar[arg] = 1
-    # err = 1 / invar.astype('float64')
-    # err[arg] = np.inf
-    # return wave, flux, err
+    """read the LAMOST low resolution spectrum
 
+    Args:
+        fn (string): spectral file name
 
+    Returns:
+        wave, flux, error (numpy.ndarray): data of the spectrum
+    """
     hdul = fits.open(fn)
-    data = hdul[0].data
-    wave = data[2, :].astype('float64')
-    flux = data[0, :].astype('float64')
-    invar = data[1, :].astype('float64')
-    arg = np.where(invar == 0)
-    invar[arg] = 1
-    err = 1 / invar.astype('float64')
+    data = hdul[1].data
+    wave = data['WAVELENGTH'][0].astype('float64')
+    flux = data['FLUX'][0].astype('float64')
+    ivar = data['IVAR'][0].astype('float64')
+    arg = np.where(ivar == 0)
+    ivar[arg] = 1
+    err = 1 / ivar**0.5
     err[arg] = np.inf
-    arg = np.argsort(wave)
-    return wave[arg], flux[arg], err[arg]
+    argsort = np.argsort(wave)
+    wave = wave[argsort]
+    flux = flux[argsort]
+    err = err[argsort]
+    return wave, flux, err
 
 
 def read_lamost_med(fn, hduid):

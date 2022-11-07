@@ -566,6 +566,30 @@ def normalize_spec_gaussian_filter(wave, flux, fwhm=100, mask_windows=None, plot
     return normflux
 
 
+def attach_spec(wave, flux, wave_ref, flux_ref, degree=7):
+    """adjust the large profile of spec to coincide with the reference spectrum
+
+    Caution:
+        the wavelength range of the spectrum should be inside of the reference wavelength range
+
+    Args:
+        wave (numpy.ndarray): wavelength of the spectrum
+        flux (numpy.ndarray): flux of the spectrum
+        wave_ref (numpy.ndarray): wavelength of the reference spectrum
+        flux_ref (numpy.ndarray): flux of the reference spectrum
+        degree (int, optional): degree used to fit the profile difference. Defaults to 7.
+
+    Returns:
+        newflux (numpy.ndarray): the adjusted spectral flux
+    """
+    flux_ref_rebin = rebin.rebin_padvalue(wave_ref, flux_ref, wave)
+    scale_ini = flux_ref_rebin / flux
+    par_scale = fit_profile_par(wave, scale_ini, degree=degree)
+    large_scale = get_profile(wave, par_scale)
+    nflux = flux * large_scale
+    return nflux
+
+
 def get_profile(wave, pars):
     """get a legendre polynomial profile controlled by the pars.
     Args:
