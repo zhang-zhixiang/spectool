@@ -4,6 +4,7 @@ import numpy as np
 from astropy.io import fits
 from PyAstronomy.pyasl import read1dFitsSpec
 from PyAstronomy.pyasl import hmsToDeg, dmsToDeg
+from astropy.time import Time
 from . import spec_func
 
 
@@ -154,6 +155,69 @@ def read_lamost_med(fn, hduid):
     return wave, flux, err
 
 
+def read_lamost_med_lst(fn):
+    """read the LAMOST median spectra to a Spectrum object list
+
+    Args:
+        fn (string): spectral file name
+
+    Returns:
+        [Spectrum, Spectrum, ...]: a list of Spectrum object
+    """
+    hdul = fits.open(fn)
+    speclst = []
+    ra = hdul[0].header['ra']
+    dec = hdul[0].header['dec']
+    for hdu in hdul[1:]:
+        data = hdu.data
+        flux = data['flux'].astype('float64')
+        if len(flux.shape) == 2:
+            wave = data['WAVELENGTH'].astype('float64')
+            invar = data['IVAR'].astype('float64')
+            wave = wave[0, :]
+            flux = flux[0, :]
+            invar = invar[0, :]
+        else:
+            wave = 10**data['loglam'].astype('float64')
+            invar = data['IVAR'].astype('float64')
+        arg = invar == 0.0
+        invar[arg] = 1.0
+        invar2 = invar**0.5
+        err = 1 / invar2
+        err[arg] = np.inf
+        arg = np.argsort(wave)
+        wave = wave[arg]
+        flux = flux[arg]
+        err = err[arg]
+        ivar = invar[arg]
+        obsdate = hdu.header['DATE-OBS']
+        jd = Time(obsdate, format='isot').jd
+        extname = hdu.header['EXTNAME']
+        if 'coadd' in extname.lower():
+            coadd = True
+        else:
+            coadd = False
+        if extname == 'COADD_B' or extname[0] == 'B':
+            band = 'blue'
+        elif extname == 'COADD_R' or extname[0] == 'R':
+            band = 'red'
+        else:
+            band = 'unknown'
+        spec = Spectrum()
+        spec.wave = wave
+        spec.flux = flux
+        spec.error = err
+        spec.ivar = ivar
+        spec.coadd = coadd
+        spec.band = band
+        spec.ra = ra
+        spec.dec = dec
+        spec.obsdate = obsdate
+        spec.obsjd = jd
+        speclst.append(spec)
+    return speclst
+
+
 def read_txt_spec(fn):
     data = np.loadtxt(fn)
     wave = data[:, 0]
@@ -198,3 +262,40 @@ class Spectrum(object):
         self.wave = None
         self.flux = None
         self.error = None
+        self.ivar = None
+        self.coadd = None
+        self.band = None
+        self.ra = None
+        self.dec = None
+        self.z = None
+        self.zerr = None
+        self.obsdate = None
+        self.obsjd = None
+    
+    def _copy(self):
+        spec = Spectrum()
+        spec.wave = self.wave
+        spec.flux = self.flux
+        spec.error = self.error
+        spec.ivar = self.ivar
+        spec.coadd = self.coadd
+        spec.band = self.band
+        spec.ra = self.ra
+        spec.dec = self.dec
+        spec.z = self.z
+        spec.zerr = self.zerr
+        spec.obsdate = self.obsdate
+        spec.obsjd = self.obsjd
+        return spec
+
+    def select_spec(self, arg):
+        spec = self._copy()
+        if spec.wave is not None:
+            spec.wave = spec.wave[arg]
+        if spec.flux is not None:
+            spec.flux = spec.flux[arg]
+        if spec.error is not None:
+            spec.error = spec.error[arg]
+        if spec.ivar is not None:
+            spec.ivar = spec.ivar[arg]
+        return spec
