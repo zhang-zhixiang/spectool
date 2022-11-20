@@ -157,6 +157,17 @@ def read_lamost_med(fn, hduid):
 
 def read_lamost_med_lst(fn):
     """read the LAMOST median spectra to a Spectrum object list
+        The Spectrum object of LAMOST median spectrum has the following attributes:
+            band: 'blue' or 'red'
+            coadd: True or False
+            wave: wavelength
+            flux: flux
+            err: error
+            ivar: inverse variance
+            ra (float): right ascension
+            dec (float): declination
+            obsdate (str): observation date
+            objid (float): object id
 
     Args:
         fn (string): spectral file name
