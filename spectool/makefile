@@ -11,8 +11,8 @@ endif
 suffix := $(shell python3-config --extension-suffix)
 PY_CFLAGS := $(shell python3-config --includes)
 PYBIND11 := $(shell python3 -m pybind11 --includes)
-GSL := $(shell pkg-config --libs gsl)
-FFTW := $(shell pkg-config --libs fftw3)
+GSL := $(shell pkg-config --cflags --libs gsl)
+FFTW := $(shell pkg-config --cflags --libs fftw3)
 SHARE = -shared
 
 librebin = rebin$(suffix)

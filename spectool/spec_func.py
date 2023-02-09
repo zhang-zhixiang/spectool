@@ -1,4 +1,3 @@
-from typing_extensions import IntVar
 import numpy as np
 from numpy.ma import clump_unmasked
 from scipy.ndimage import median_filter
