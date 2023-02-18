@@ -6,7 +6,6 @@ from . import libccf
 from . import spec_func
 from . import rebin
 from . import liblogccf
-from . import libspecfunc
 
 
 def shiftspec(flux, shift):
@@ -349,9 +348,7 @@ def find_radial_velocity_mc(wave, flux, wave_ref, flux_ref, mult=True, plot=Fals
     newflux_ref = np.array(rebin.rebin(wave_ref, flux_ref, newave))
     # t1 = time.time()
     # binsize = int(newflux.size / 50) + 1
-    # cont = libspecfunc.get_normalized_spec(newave, newflux, binsize, 5)
     cont = spec_func.continuum(newave, newflux, maxiterations=1)
-    # cont_ref = libspecfunc.get_normalized_spec(newave, newflux_ref, binsize, 5)
     cont_ref = spec_func.continuum(newave, newflux_ref, maxiterations=1)
     # t2 = time.time()
     # print('reduce continuum time spend =', t2 - t1)
