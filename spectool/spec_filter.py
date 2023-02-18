@@ -1,10 +1,29 @@
+import math
 import numpy as np
 from astropy.constants import c
 from scipy.interpolate import interp1d
 from . import convol
+from . import lnspecfilter
 
 
 c = c.value
+
+
+def rotation_filter(wave, flux, vrot, limb=0.5):
+    """Smooth spectrum using rotation kernel
+       Be careful: the function need the wavelength to be uniform in log space
+
+    Args:
+        wave (numpy.ndarray(float64)): spectrum wave
+        flux (numpy.ndarray(float64)): spectrum flux
+        vrot (float): rotation kernel width, in the unit of km/s
+        limb (float): limb darkening coefficient
+
+    Returns:
+        numpy.ndarray(float64): the spectrum flux after smooth
+    """
+    dll = math.log(wave[1]/wave[0])
+    return np.array(lnspecfilter.rotation_filter(flux, dll, vrot, limb))
 
 
 def _get_balances(func_interp, w_start, w_end, interval):
