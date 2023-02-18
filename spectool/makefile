@@ -19,9 +19,9 @@ librebin = rebin$(suffix)
 libconvol = convol$(suffix)
 libccf = libccf$(suffix)
 liblogccf = liblogccf$(suffix)
-libspecfunc = libspecfunc$(suffix)
+liblnspecfilter = lnspecfilter$(suffix)
 
-default : $(libconvol) $(librebin) $(libccf) $(liblogccf) $(libspecfunc)
+default : $(libconvol) $(librebin) $(libccf) $(liblogccf) $(liblnspecfilter)
 
 $(libconvol) : convol.cpp types.cpp
 	$(CC) convol.cpp types.cpp -o $(libconvol) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(GSL)
@@ -32,11 +32,11 @@ $(librebin) : rebin.cpp types.cpp
 $(libccf) : iccf.cpp types.cpp
 	$(CC) iccf.cpp types.cpp -o $(libccf) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11)
 
-$(liblogccf) : logccf.cpp cppspecfunc.cpp types.cpp
-	$(CC) logccf.cpp cppspecfunc.cpp types.cpp -o $(liblogccf) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(FFTW) $(GSL)
+$(liblogccf) : logccf.cpp types.cpp
+	$(CC) logccf.cpp types.cpp -o $(liblogccf) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(FFTW) $(GSL)
 
-$(libspecfunc) : cppspecfunc.cpp types.cpp
-	$(CC) cppspecfunc.cpp types.cpp -o $(libspecfunc) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11) $(GSL)
+$(liblnspecfilter) : ln_spec_filter.cpp types.cpp
+	$(CC) ln_spec_filter.cpp types.cpp -o $(liblnspecfilter) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11)
 
 clean :
-	rm $(libconvol) $(librebin) $(libccf) $(liblogccf) $(libspecfunc)
+	rm $(libconvol) $(librebin) $(libccf) $(liblogccf) $(liblnspecfilter)
