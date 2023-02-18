@@ -8,7 +8,6 @@
 #include <vector>
 // #include "pybind11/pybind11.h"
 #include <fftw3.h>
-#include "cppspecfunc.h"
 #include "mathfunc.hpp"
 #include "pybind11/stl.h"
 #include "types.h"
@@ -185,64 +184,6 @@ auto get_ccf_value(Iter begin, Iter end, Iterb begin_ref, bool mult = true) {
   return out / length;
 }
 
-Continuum speccont(30, 3, 30, 3);
-Continuum spec_ref_cont(30, 3, 30, 3);
-
-auto _get_ccf(const double* _spec_start,
-              const double* _spec_end,
-              const double* _spec_ref,
-              int sl,
-              int sr,
-              double resolution,
-              const bool mult = true) {
-  int length = _spec_end - _spec_start;
-  speccont.set_spec(_spec_start, _spec_end);
-  auto specitr = speccont.get_norm_spec_itr();
-  double* spec_start = specitr.get();
-  double* spec_end = specitr.get() + length;
-  normalize_arr(spec_start, spec_end, spec_start);
-
-  spec_ref_cont.set_spec(_spec_ref, _spec_ref + length);
-  auto spec_ref_itr = spec_ref_cont.get_norm_spec_itr();
-  double* spec_ref = spec_ref_itr.get();
-  normalize_arr(spec_ref, spec_ref + length, spec_ref);
-
-  const int margin = std::max(std::abs(sl), std::abs(sr));
-  VEC outshift, rlst;
-  const auto sfrom = spec_start + margin;
-  const auto send = spec_end - margin;
-  for (int shift = sl; shift <= sr; ++shift) {
-    auto tfrom = spec_ref + margin - shift;
-    auto r = get_ccf_value(sfrom, send, tfrom, mult);
-    outshift.push_back(double(shift));
-    rlst.push_back(r);
-  }
-  int indminmax = 0;
-  if (mult == true) {
-    auto itrmax = std::max_element(rlst.begin(), rlst.end());
-    indminmax = std::distance(rlst.begin(), itrmax);
-  } else {
-    auto itrmin = std::min_element(rlst.begin(), rlst.end());
-    indminmax = std::distance(rlst.begin(), itrmin);
-  }
-  double aprox_shift = outshift[indminmax];
-
-  if (resolution > 1)
-    return std::make_tuple(outshift, rlst);
-
-  int specsize = spec_end - spec_start;
-  Shift_spec shiftmodel(spec_ref, spec_ref + specsize);
-  const auto tbegin = shiftmodel.specout + margin;
-  for (double shift = aprox_shift - 1; shift <= aprox_shift + 1;
-       shift += resolution) {
-    shiftmodel.get_shift_spec(shift);
-    auto r = get_ccf_value(sfrom, send, tbegin, mult);
-    outshift.push_back(shift);
-    rlst.push_back(r);
-  }
-  return std::make_tuple(outshift, rlst);
-}
-
 auto get_ccf(CVEC& spec,
              CVEC& spec_ref,
              double left_edge,
@@ -327,36 +268,6 @@ inline auto get_shift_rmax(CVEC& shiftlst, CVEC& rlst, bool mult) {
   return std::make_tuple(shift, rmax);
 }
 
-auto get_shift_mc_full(CVEC& spec,
-                       CVEC& spec_ref,
-                       double left_edge,
-                       double right_edge,
-                       double resolution,
-                       int mcnumber,
-                       double inc_ration,
-                       bool mult = true) {
-  int sl = int(std::floor(left_edge));
-  int sr = int(std::ceil(right_edge));
-  int ccfsize = int(spec.size() * inc_ration);
-  int start_window = spec.size() - ccfsize - 1;
-  std::uniform_int_distribution<int> uniform_dist(0, start_window);
-  auto spec_begin = &(spec[0]);
-  auto spec_ref_begin = &(spec_ref[0]);
-  VEC outshift(mcnumber);
-  VEC outrmax(mcnumber);
-  for (size_t loop = 0; loop < mcnumber; ++loop) {
-    int from = uniform_dist(e1);
-    auto specfrom = spec_begin + from;
-    auto spec_ref_from = spec_ref_begin + from;
-    auto [shiftlst, rlst] = _get_ccf(specfrom, specfrom + ccfsize,
-                                     spec_ref_from, sl, sr, resolution, mult);
-    auto [shift, rmax] = get_shift_rmax(shiftlst, rlst, mult);
-    outshift[loop] = shift;
-    outrmax[loop] = rmax;
-  }
-  return std::make_tuple(outshift, outrmax);
-}
-
 auto get_shift_mc(CVEC& spec,
                   CVEC& spec_ref,
                   double left_edge,
@@ -436,22 +347,6 @@ auto numpy_get_shift_mc(CVEC& spec,
   return std::make_tuple(newshift, newrmax);
 }
 
-auto numpy_get_shift_mc_full(CVEC& spec,
-                             CVEC& spec_ref,
-                             double left_edge,
-                             double right_edge,
-                             double resolution,
-                             int mcnumber,
-                             double inc_ration,
-                             bool mult = true) {
-  auto [shift, rmax] =
-      get_shift_mc_full(spec, spec_ref, left_edge, right_edge, resolution,
-                        mcnumber, inc_ration, mult);
-  auto newshift = VEC2numpyarr(shift);
-  auto newrmax = VEC2numpyarr(rmax);
-  return std::make_tuple(newshift, newrmax);
-}
-
 auto numpy_get_ccf(CVEC& spec,
                    CVEC& spec_ref,
                    double left_edge,
@@ -476,10 +371,6 @@ PYBIND11_MODULE(liblogccf, m) {
         "get the shift of spec compared with spec_ref");
   m.def("get_shift_mc", &numpy_get_shift_mc,
         "get the shift lst of spec compared with spec_ref");
-  m.def("get_shift_mc_full", &numpy_get_shift_mc_full,
-        "get the shift lst of spec compared with spec_ref,\n"
-        "this function will reduce the continuum and normalize "
-        "the spectra before compute the ccf");
   m.def("get_ccf", &numpy_get_ccf,
         "get the ccf function array of spec compared with spec_ref");
 }
