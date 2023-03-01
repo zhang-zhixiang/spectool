@@ -4,6 +4,7 @@
 #include <iostream>
 #include <numeric>
 #include <vector>
+#include <limits>
 #define NDEBUG
 #include <assert.h>
 #include<gsl/gsl_statistics.h>
@@ -133,6 +134,14 @@ DARR rebin_err(const DARR& wave, const DARR& err, const DARR& new_wave) {
   }
   assert(new_err.size() == new_wave.size());
   for(auto itr = new_err.begin(); itr != new_err.end(); ++itr) *itr *= med_value;
+  int ind = 0;
+  while(new_wave[ind] < wave.front()){
+    new_err[ind++] = std::numeric_limits<double>::infinity();
+  }
+  ind = new_wave.size() - 1;
+  while(new_wave[ind] > wave.back()){
+    new_err[ind--] = std::numeric_limits<double>::infinity();
+  }
   return new_err;
 }
 
