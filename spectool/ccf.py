@@ -278,8 +278,8 @@ def find_radial_velocity2_mc(wave, flux, fluxerr, wave_ref, flux_ref, mcnum=1000
     newflux = np.array(rebin.rebin_padvalue(wave, flux, newave))
     newflux_ref = np.array(rebin.rebin_padvalue(wave_ref, flux_ref, newave))
     if do_continuum is True:
-        cont = spec_func.continuum(newave, newflux, degree=degree, maxiterations=1, mask_window=maskwindow)
-        cont_ref = spec_func.continuum(newave, newflux_ref, degree=degree, maxiterations=1, mask_window=maskwindow)
+        cont = spec_func.continuum(newave, newflux, degree=degree, mask_window=maskwindow)
+        cont_ref = spec_func.continuum(newave, newflux_ref, degree=degree, mask_window=maskwindow)
     else:
         cont = newflux
         cont_ref = newflux_ref
