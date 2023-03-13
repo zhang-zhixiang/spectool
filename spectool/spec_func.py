@@ -565,11 +565,10 @@ def normalize_spec_gaussian_filter(wave, flux, fwhm=100, mask_windows=None, plot
     return normflux
 
 
-def attach_spec(wave, flux, wave_ref, flux_ref, degree=7):
+def attach_spec(wave, flux, wave_ref, flux_ref, degree=7, mask_windows=None):
     """adjust the large profile of spec to coincide with the reference spectrum
 
-    Caution:
-        the wavelength range of the spectrum should be inside of the reference wavelength range
+    Caution: the spectral sampling of the spectrum will be rebined to the reference spectrum
 
     Args:
         wave (numpy.ndarray): wavelength of the spectrum
@@ -577,16 +576,21 @@ def attach_spec(wave, flux, wave_ref, flux_ref, degree=7):
         wave_ref (numpy.ndarray): wavelength of the reference spectrum
         flux_ref (numpy.ndarray): flux of the reference spectrum
         degree (int, optional): degree used to fit the profile difference. Defaults to 7.
+        mask_windows (list): the mask windows before to do the attach. Defaults to None.
 
     Returns:
-        newflux (numpy.ndarray): the adjusted spectral flux
+        new_wave, new_flux (numpy.ndarray): the adjusted spectrum
     """
-    flux_ref_rebin = rebin.rebin_padvalue(wave_ref, flux_ref, wave)
-    scale_ini = flux_ref_rebin / flux
-    par_scale = fit_profile_par(wave, scale_ini, degree=degree)
-    large_scale = get_profile(wave, par_scale)
-    nflux = flux * large_scale
-    return nflux
+    w_min, w_max = np.min(wave), np.max(wave)
+    arg = np.where((wave_ref >= w_min) & (wave_ref <= w_max))[0]
+    nwave_ref = wave_ref[arg]
+    nflux_ref = flux_ref[arg]
+    flux_rebin = rebin.rebin_padvalue(wave, flux, nwave_ref)
+    scale_ini = nflux_ref / flux_rebin
+    par_scale = fit_profile_par(nwave_ref, scale_ini, degree=degree, mask_windows=mask_windows)
+    large_scale = get_profile(nwave_ref, par_scale)
+    nflux = flux_rebin * large_scale
+    return nwave_ref, nflux
 
 
 def get_profile(wave, pars):
