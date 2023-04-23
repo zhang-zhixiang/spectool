@@ -4,12 +4,13 @@ from astropy.constants import c
 from scipy.interpolate import interp1d
 from . import convol
 from . import lnspecfilter
+from . import rebin
 
 
 c = c.value
 
 
-def rotation_filter(wave, flux, vrot, limb=0.5):
+def rotation_filter(wave, flux, vrot, limb=0.5, flag_log=False):
     """Smooth spectrum using rotation kernel
        Be careful: the function need the wavelength to be uniform in log space
 
@@ -18,10 +19,19 @@ def rotation_filter(wave, flux, vrot, limb=0.5):
         flux (numpy.ndarray(float64)): spectrum flux
         vrot (float): rotation kernel width, in the unit of km/s
         limb (float): limb darkening coefficient
+        flag_log (bool): if True, the wavelength sampling is uniform in log space
 
     Returns:
         numpy.ndarray(float64): the spectrum flux after smooth
     """
+    if flag_log == False:
+        wave_min, wave_max = np.min(wave), np.max(wave)
+        nwave = np.logspace(np.log10(wave_min), np.log10(wave_max), len(wave), endpoint=True)
+        nflux = rebin.rebin_padvalue(wave, flux, nwave)
+        dll = math.log(nwave[1]/nwave[0])
+        flux_broad = np.array(lnspecfilter.rotation_filter(nflux, dll, vrot, limb))
+        flux_out = rebin.rebin_padvalue(nwave, flux_broad, wave)
+        return flux_out
     dll = math.log(wave[1]/wave[0])
     return np.array(lnspecfilter.rotation_filter(flux, dll, vrot, limb))
 
