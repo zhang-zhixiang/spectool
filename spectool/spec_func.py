@@ -568,7 +568,9 @@ def normalize_spec_gaussian_filter(wave, flux, fwhm=100, mask_windows=None, plot
 def attach_spec(wave, flux, wave_ref, flux_ref, degree=7, mask_windows=None):
     """adjust the large profile of spec to coincide with the reference spectrum
 
-    Caution: the spectral sampling of the spectrum will be rebined to the reference spectrum
+    The function keeps the original spectral sampling of the spectrum, 
+    but for the wavelength range of the spectrum beyond the coverage of the 
+    reference spectrum, the fuction will truncate it.
 
     Args:
         wave (numpy.ndarray): wavelength of the spectrum
