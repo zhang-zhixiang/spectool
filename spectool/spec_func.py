@@ -581,6 +581,8 @@ def attach_spec(wave, flux, wave_ref, flux_ref, degree=7, mask_windows=None):
     Returns:
         new_wave, new_flux (numpy.ndarray): the adjusted spectrum
     """
+    w_min = max(np.min(wave), np.min(wave_ref))
+    w_max = min(np.max(wave), np.max(wave_ref))
     w_min, w_max = np.min(wave), np.max(wave)
     arg = np.where((wave_ref >= w_min) & (wave_ref <= w_max))[0]
     nwave_ref = wave_ref[arg]
@@ -588,9 +590,13 @@ def attach_spec(wave, flux, wave_ref, flux_ref, degree=7, mask_windows=None):
     flux_rebin = rebin.rebin_padvalue(wave, flux, nwave_ref)
     scale_ini = nflux_ref / flux_rebin
     par_scale = fit_profile_par(nwave_ref, scale_ini, degree=degree, mask_windows=mask_windows)
+    arg2 = (wave >= w_min) & (wave <= w_max)
+    nwave = wave[arg2]
+    nflux = flux[arg2]
     large_scale = get_profile(nwave_ref, par_scale)
-    nflux = flux_rebin * large_scale
-    return nwave_ref, nflux
+    large_scale_rebin = rebin.rebin_padvalue(nwave_ref, large_scale, nwave)
+    nflux_out = nflux * large_scale_rebin
+    return nwave, nflux_out
 
 
 def get_profile(wave, pars):
