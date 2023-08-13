@@ -325,7 +325,7 @@ def median_reject_cos(flux, size=21):
     res = flux - med_flux
     std = np.std(res)
     arg = np.where(res > 3 * std)
-    new_flux = flux
+    new_flux = flux.copy()
     new_flux[arg] = med_flux[arg]
     return new_flux
 
