@@ -585,19 +585,17 @@ def attach_spec(wave, flux, wave_ref, flux_ref, degree=7, mask_windows=None):
     """
     w_min = max(np.min(wave), np.min(wave_ref))
     w_max = min(np.max(wave), np.max(wave_ref))
-    w_min, w_max = np.min(wave), np.max(wave)
     arg = np.where((wave_ref >= w_min) & (wave_ref <= w_max))[0]
     nwave_ref = wave_ref[arg]
     nflux_ref = flux_ref[arg]
-    flux_rebin = rebin.rebin_padvalue(wave, flux, nwave_ref)
-    scale_ini = nflux_ref / flux_rebin
-    par_scale = fit_profile_par(nwave_ref, scale_ini, degree=degree, mask_windows=mask_windows)
     arg2 = (wave >= w_min) & (wave <= w_max)
     nwave = wave[arg2]
     nflux = flux[arg2]
-    large_scale = get_profile(nwave_ref, par_scale)
-    large_scale_rebin = rebin.rebin_padvalue(nwave_ref, large_scale, nwave)
-    nflux_out = nflux * large_scale_rebin
+    nflux_ref_rebin = rebin.rebin_padvalue(nwave_ref, nflux_ref, nwave)
+    scale_ini = nflux_ref_rebin / nflux
+    par_scale = fit_profile_par(nwave, scale_ini, degree=degree, mask_windows=mask_windows)
+    large_scale = get_profile(nwave, par_scale)
+    nflux_out = nflux * large_scale
     return nwave, nflux_out
 
 
