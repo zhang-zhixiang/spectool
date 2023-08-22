@@ -164,10 +164,16 @@ def read_lamost_med_lst(fn):
             flux: flux
             err: error
             ivar: inverse variance
+            snr (float): signal to noise ratio
             ra (float): right ascension
             dec (float): declination
             obsdate (str): observation date
-            objid (float): object id
+            obsjd (float): the julian date of observation
+            exptime (float): exposure time
+            extname (str): extension name
+            fn (str): file name
+            header (dict): header of the spectrum
+            data (numpy.ndarray): data of the spectrum
 
     Args:
         fn (string): spectral file name
@@ -180,6 +186,7 @@ def read_lamost_med_lst(fn):
     ra = hdul[0].header['ra']
     dec = hdul[0].header['dec']
     for hdu in hdul[1:]:
+        spec = Spectrum()
         data = hdu.data
         flux = data['flux'].astype('float64')
         if len(flux.shape) == 2:
@@ -188,9 +195,27 @@ def read_lamost_med_lst(fn):
             wave = wave[0, :]
             flux = flux[0, :]
             invar = invar[0, :]
+            if 'ANDMASK' in hdu.data.names:
+                mask = data['ANDMASK'][0, :].astype(bool)
+                spec.andmask = mask
+            if 'ORMASK' in hdu.data.names:
+                mask = data['ORMASK'][0, :].astype(bool)
+                spec.ormask = mask
+            if 'NORMALIZATION' in hdu.data.names:
+                norm = data['NORMALIZATION'][0, :].astype(float)
+                spec.normflux = norm
         else:
             wave = 10**data['loglam'].astype('float64')
             invar = data['IVAR'].astype('float64')
+            if 'ANDMASK' in hdu.data.names:
+                mask = data['ANDMASK'].astype(bool)
+                spec.andmask = mask
+            if 'ORMASK' in hdu.data.names:
+                mask = data['ORMASK'].astype(bool)
+                spec.ormask = mask
+            if 'NORMALIZATION' in hdu.data.names:
+                norm = data['NORMALIZATION'].astype(float)
+                spec.normflux = norm
         arg = invar == 0.0
         invar[arg] = 1.0
         invar2 = invar**0.5
@@ -214,17 +239,30 @@ def read_lamost_med_lst(fn):
             band = 'red'
         else:
             band = 'unknown'
-        spec = Spectrum()
+        if 'SNR' in hdu.header:
+            snr = float(hdu.header['SNR'])
+        else:
+            snr = np.nan
+        if 'EXPTIME' in hdu.header:
+            exptime = float(hdu.header['EXPTIME'])
+        else:
+            exptime = np.nan
         spec.wave = wave
         spec.flux = flux
         spec.error = err
         spec.ivar = ivar
+        spec.snr = snr
         spec.coadd = coadd
         spec.band = band
         spec.ra = ra
         spec.dec = dec
         spec.obsdate = obsdate
         spec.obsjd = jd
+        spec.exptime = exptime
+        spec.extname = extname
+        spec.fn = fn
+        spec.header = hdu.header
+        spec.data = data
         speclst.append(spec)
     return speclst
 
@@ -283,20 +321,13 @@ class Spectrum(object):
         self.obsdate = None
         self.obsjd = None
     
-    def _copy(self):
+    def copy(self):
         spec = Spectrum()
-        spec.wave = self.wave
-        spec.flux = self.flux
-        spec.error = self.error
-        spec.ivar = self.ivar
-        spec.coadd = self.coadd
-        spec.band = self.band
-        spec.ra = self.ra
-        spec.dec = self.dec
-        spec.z = self.z
-        spec.zerr = self.zerr
-        spec.obsdate = self.obsdate
-        spec.obsjd = self.obsjd
+        for key, value in self.__dict__.items():
+            if isinstance(value, np.ndarray):
+                spec.__dict__[key] = value.copy()
+            else:
+                spec.__dict__[key] = value
         return spec
 
     def select_spec(self, arg):
