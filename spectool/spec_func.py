@@ -565,6 +565,29 @@ def normalize_spec_gaussian_filter(wave, flux, fwhm=100, mask_windows=None, plot
     return normflux
 
 
+def attach_spec_same_sampling(wave, flux, flux_ref, degree=7, mask_windows=None):
+    """
+    Adjust the large profile of spec to coincide with the reference spectrum.
+    This is a simple version of the function attach_spec, to correspond to the
+    same sampling of the spectrum and the reference spectrum.
+
+    Args:
+        wave (numpy.ndarray): wavelength of the spectrum and the reference spectrum
+        flux (numpy.ndarray): flux of the spectrum
+        flux_ref (numpy.ndarray): flux of the reference spectrum
+        degree (int, optional): degree used to fit the profile difference. Defaults to 7.
+        mask_windows (list): the mask windows before to do the attach. Defaults to None.
+
+    Returns:
+        numpy.ndarray: the adjusted spectrum
+    """
+    scale_ini = flux_ref / flux
+    par_scale = fit_profile_par(wave, scale_ini, degree=degree, mask_windows=mask_windows)
+    large_scale = get_profile(wave, par_scale)
+    nflux_out = flux * large_scale
+    return nflux_out
+
+
 def attach_spec(wave, flux, wave_ref, flux_ref, degree=7, mask_windows=None):
     """adjust the large profile of spec to coincide with the reference spectrum
 
