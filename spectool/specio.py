@@ -204,6 +204,9 @@ def read_lamost_med_lst(fn):
             if 'NORMALIZATION' in hdu.data.names:
                 norm = data['NORMALIZATION'][0, :].astype(float)
                 spec.normflux = norm
+            if 'PIXMASK' in hdu.data.names:
+                mask = data['PIXMASK'][0, :].astype(int)
+                spec.pixmask = mask
         else:
             wave = 10**data['loglam'].astype('float64')
             invar = data['IVAR'].astype('float64')
@@ -216,6 +219,9 @@ def read_lamost_med_lst(fn):
             if 'NORMALIZATION' in hdu.data.names:
                 norm = data['NORMALIZATION'].astype(float)
                 spec.normflux = norm
+            if 'PIXMASK' in hdu.data.names:
+                mask = data['PIXMASK'].astype(int)
+                spec.pixmask = mask
         arg = invar == 0.0
         invar[arg] = 1.0
         invar2 = invar**0.5
