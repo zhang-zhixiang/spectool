@@ -3,6 +3,7 @@
 
 # from .rebin import *
 from . import rebin
+from . import pyrebin
 from . import ccf
 from . import specio
 from . import spec_func
