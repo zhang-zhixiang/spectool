@@ -1,7 +1,5 @@
 # spectool
 
----
-
 This is a collection of the common reduction functions of the spectroscopic data, including rebin function, smooth function, normalize function, radial velocity measurement function, et al.
 
 #### Installation
@@ -21,8 +19,6 @@ python setup.py install
 ```
 
 #### Dependencies
-
----
 
 This package depends on the following packages:
 
