@@ -1,37 +1,47 @@
 # spectool
 
-#### 介绍
-This is a collection of the common reduction functions of the astronomical spectra, including rebinning the wavelength, using the gaussian filter to smooth the spectrum, wavelength velocity shift, normalizing the stellar spectrum continuum, et al.
+---
 
-#### 软件架构
-软件架构说明
+This is a collection of the common reduction functions of the spectroscopic data, including rebin function, smooth function, normalize function, radial velocity measurement function, et al.
 
+#### Installation
 
-#### 安装教程
+This package only supports Linux or Mac OS, or you can install it in WSL (Windows Subsystem for Linux). You can install it by the following command:
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+```bash
+pip install git+https://github.com/zzxihep/spectool.git
+```
 
-#### 使用说明
+or you can download the source code and install it by the following command:
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+```bash
+git clone https://github.com/zzxihep/spectool.git
+cd spectool
+python setup.py install
+```
 
-#### 参与贡献
+#### Dependencies
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+---
 
+This package depends on the following packages:
 
-#### 码云特技
+- GSL [(GNU Scientific Library)](https://www.gnu.org/software/gsl/). version >= 2.7
+- FFTW3
+- pybind11
+- PyAstronomy
+If you are using Ubuntu or Debian, you can install them by the following command:
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  码云官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解码云上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是码云最有价值开源项目，是码云综合评定出的优秀开源项目
-5.  码云官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  码云封面人物是一档用来展示码云会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+```bash
+sudo apt install libgsl-dev libfftw3-dev
+pip install pybind11
+pip install PyAstronomy
+```
+
+If you are using Mac OS, you can install them by the following command:
+
+```bash
+brew install gsl fftw
+pip install pybind11
+pip install PyAstronomy
+```
