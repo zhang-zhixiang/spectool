@@ -49,10 +49,28 @@ def read_iraf_echelle(fn):
         fn (fitname): fits name 
 
     Returns:
-        [[wave, flux], [wave, flux],...]: A spectra list
-        if the fits file contains sigma information, then return
-        [[wave, flux, sigma], [wave, flux, sigma],...]
+        [[wave, flux, flux_raw, sigma, sky],...] (list): a list of spectra
+        if the spectra not have the relative data, the value (such as flux_raw, sky) will be None.
     """
+    def get_data_index(header):
+        ind_flux_clean = None
+        ind_flux_raw = None
+        ind_sigma = None
+        ind_sky = None
+        bandids = ['BANDID1', 'BANDID2', 'BANDID3', 'BANDID4']
+        for ind, bandid in enumerate(bandids):
+            if bandid in header:
+                band = header[bandid]
+                if 'spectrum' in band.lower():
+                    ind_flux_clean = ind
+                elif 'raw' in band.lower():
+                    ind_flux_raw = ind
+                elif 'sigma' in band.lower():
+                    ind_sigma = ind
+                elif 'sky' in band.lower():
+                    ind_sky = ind
+        return ind_flux_clean, ind_flux_raw, ind_sigma, ind_sky
+        
     # from pyraf import iraf
     # import tempfile
     fit = fits.open(fn)
@@ -74,6 +92,8 @@ def read_iraf_echelle(fn):
     lis = re.findall(r'"(.+?)"', wtext)
     # specnames = re.findall(r'spec.{1,3}=', wtext)
     specs = []
+    head = fit[0].header
+    ind_flux_clean, ind_flux_raw, ind_sigma, ind_sky = get_data_index(head)
     for ind, line in enumerate(lis):
         if len(data.shape) == 2:
             flux = data[ind].astype(float)
@@ -81,6 +101,22 @@ def read_iraf_echelle(fn):
         else:
             shape = data.shape
             flux = data[0, ind].astype(float)
+            if ind_flux_clean is not None:
+                flux = data[ind_flux_clean, ind].astype(float)
+            else:
+                flux = None
+            if ind_flux_raw is not None:
+                flux_raw = data[ind_flux_raw, ind].astype(float)
+            else:
+                flux_raw = None
+            if ind_sigma is not None:
+                sigma = data[ind_sigma, ind].astype(float)
+            else:
+                sigma = None
+            if ind_sky is not None:
+                sky = data[ind_sky, ind].astype(float)
+            else:
+                sky = None
             if shape[0] < 4:
                 sigma = None
             else:
@@ -90,10 +126,8 @@ def read_iraf_echelle(fn):
         step = float(lines[4])
         size = int(lines[5])
         wave = np.arange(size) * step + wbegin
-        if sigma is None:
-            specs.append((wave, flux))
-        else:
-            specs.append((wave, flux, sigma))
+        spec = (wave, flux, flux_raw, sigma, sky)
+        specs.append(spec)
     return specs
 
 
