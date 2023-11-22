@@ -2,7 +2,7 @@
 
 This is a collection of the common reduction functions of the spectroscopic data, including rebin function, smooth function, normalize function, radial velocity measurement function, et al.
 
-#### Installation
+## Installation
 
 This package only supports Linux or Mac OS, or you can install it in WSL (Windows Subsystem for Linux). You can install it by the following command:
 
@@ -18,7 +18,7 @@ cd spectool
 python setup.py install
 ```
 
-#### Dependencies
+## Dependencies
 
 This package depends on the following packages:
 
