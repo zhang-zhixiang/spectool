@@ -22,10 +22,11 @@ python setup.py install
 
 This package depends on the following packages:
 
-- GSL [(GNU Scientific Library)](https://www.gnu.org/software/gsl/). version >= 2.7
+- [GSL](https://www.gnu.org/software/gsl/) (version >= 2.7)
 - FFTW3
 - pybind11
 - PyAstronomy
+
 If you are using Ubuntu or Debian, you can install them by the following command:
 
 ```bash
