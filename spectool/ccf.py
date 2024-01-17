@@ -6,6 +6,7 @@ from . import libccf
 from . import spec_func
 from . import rebin
 from . import liblogccf
+from . import pyrebin
 
 
 def shiftspec(flux, shift):
@@ -168,8 +169,8 @@ def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False,
     logwend = max(logwave[-1], logwave_ref[-1])
     lognewave = np.arange(logwbegin, logwend, log_delta_w)
     newave = np.exp(lognewave)
-    newflux = np.array(rebin.rebin_padvalue(wave, flux, newave))
-    newflux_ref = np.array(rebin.rebin_padvalue(wave_ref, flux_ref, newave))
+    newflux = np.array(pyrebin.rebin_padvalue(wave, flux, newave, interp_kind='cubic'))
+    newflux_ref = np.array(pyrebin.rebin_padvalue(wave_ref, flux_ref, newave, interp_kind='cubic'))
     if do_continuum is True:
         cont = spec_func.continuum(newave, newflux, degree=degree)
         cont_ref = spec_func.continuum(newave, newflux_ref, degree=degree)
