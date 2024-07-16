@@ -8,9 +8,11 @@ else
 	CC = clang++
 endif
 
-suffix := $(shell python3-config --extension-suffix)
-PY_CFLAGS := $(shell python3-config --includes)
-PYBIND11 := $(shell python3 -m pybind11 --includes)
+PYTHON_VERSION ?= python3
+PYTHON_CONFIG := $(PYTHON_VERSION)-config
+suffix := $(shell $(PYTHON_CONFIG) --extension-suffix)
+PY_CFLAGS := $(shell $(PYTHON_CONFIG) --includes)
+PYBIND11 := $(shell $(PYTHON_VERSION) -m pybind11 --includes)
 GSL := $(shell pkg-config --cflags --libs gsl)
 FFTW := $(shell pkg-config --cflags --libs fftw3)
 SHARE = -shared
@@ -39,4 +41,4 @@ $(liblnspecfilter) : ln_spec_filter.cpp types.cpp
 	$(CC) ln_spec_filter.cpp types.cpp -o $(liblnspecfilter) $(FLAG) $(SHARE) $(PY_CFLAGS) $(PYBIND11)
 
 clean :
-	rm $(libconvol) $(librebin) $(libccf) $(liblogccf) $(liblnspecfilter)
+	rm -f *$(suffix) *.so *.dylib *.dll
