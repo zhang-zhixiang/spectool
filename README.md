@@ -7,13 +7,13 @@ This is a collection of the common reduction functions of the spectroscopic data
 This package only supports Linux or Mac OS, or you can install it in WSL (Windows Subsystem for Linux). You can install it by the following command:
 
 ```bash
-pip install git+https://github.com/zzxihep/spectool.git
+pip install git+https://github.com/zhang-zhixiang/spectool.git
 ```
 
 or you can download the source code and install it by the following command:
 
 ```bash
-git clone https://github.com/zzxihep/spectool.git
+git clone https://github.com/zhang-zhixiang/spectool.git
 cd spectool
 python setup.py install
 ```
