@@ -4,11 +4,11 @@ spectool is a collection of common reduction functions for spectroscopic data, p
 
 ## Features
 
-- Rebinning & Interpolation: Functions for resampling spectra to a new wavelength grid using different interpolation methods.
-- Spectral Smoothing & Filtering: Various smoothing methods, including Gaussian and rotation kernel filters, for both wavelength and velocity space.
-- Spectral Normalization: Normalization of spectral data using median filter and polynomial fitting techniques.
-- Spectral Matching & Fitting: Tools for matching and scaling spectra to a reference spectrum using polynomial fitting and other methods.
-- Radial Velocity Measurement: Functions for calculating radial velocities from spectroscopic data.
+- **Rebinning & Interpolation**: Functions for resampling spectra to a new wavelength grid using different interpolation methods.
+- **Spectral Smoothing & Filtering**: Various smoothing methods, including Gaussian and rotation kernel filters, for both wavelength and velocity space.
+- **Spectral Normalization**: Normalization of spectral data using median filter and polynomial fitting techniques.
+- **Spectral Matching & Fitting**: Tools for matching and scaling spectra to a reference spectrum using polynomial fitting and other methods.
+- **Radial Velocity Measurement**: Functions for calculating radial velocities from spectroscopic data.
 
 ## Installation
 
