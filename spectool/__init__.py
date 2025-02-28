@@ -1,5 +1,4 @@
-# from reduce_template import *
-# import reduce_template
+__version__ = "1.0.0"
 
 # from .rebin import *
 from . import rebin
