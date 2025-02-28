@@ -11,18 +11,35 @@ c = c.value
 
 
 def rotation_filter(wave, flux, vrot, limb=0.5, flag_log=False):
-    """Smooth spectrum using rotation kernel
-       Be careful: the function need the wavelength to be uniform in log space
+    """
+    Rotation filter for spectral data.
 
-    Args:
-        wave (numpy.ndarray(float64)): spectrum wave
-        flux (numpy.ndarray(float64)): spectrum flux
-        vrot (float): rotation kernel width, in the unit of km/s
-        limb (float): limb darkening coefficient
-        flag_log (bool): if True, the wavelength sampling is uniform in log space
+    This function applies a rotation filter to a given spectrum using the specified rotational velocity (`vrot`).
+    It can either directly work with the input wavelength and flux data or interpolate the flux data onto a logarithmic wavelength scale 
+    before applying the filter, depending on the value of the `flag_log` parameter.
+
+    Parameters:
+        wave (array-like): The input wavelength array (in Angstroms unit).
+        flux (array-like): The input flux array corresponding to the input wavelengths.
+        vrot (float): The rotational velocity (in km/s) to apply in the filter.
+        limb (float, optional): The limb darkening coefficient (default is 0.5).
+        flag_log (bool, optional): A flag to indicate whether to use logarithmic interpolation on the wavelength axis.
+                                   If `False`, logarithmic resampling is applied. If `True`, the filter is applied directly
+                                   to the input flux data (default is `False`).
 
     Returns:
-        numpy.ndarray(float64): the spectrum flux after smooth
+        array-like: The flux array after applying the rotation filter.
+
+    Notes:
+        - When `flag_log` is `False`, the function interpolates the input flux onto a logarithmic wavelength grid, 
+          applies the rotation filter, and then re-bins the result back to the original wavelength grid.
+        - When `flag_log` is `True`, the function directly applies the rotation filter to the input flux without interpolation.
+
+    Example:
+        wave = np.array([4000, 5000, 6000])
+        flux = np.array([1.0, 0.9, 0.8])
+        vrot = 100.0
+        filtered_flux = rotation_filter(wave, flux, vrot)
     """
     if flag_log == False:
         wave_min, wave_max = np.min(wave), np.max(wave)
@@ -55,20 +72,20 @@ def _get_half_ind(wave, flux):
 
 
 def filter_use_given_profile_in_wave_space(wave, flux, wave_kernel, profile_kernel):
-    """broadening the spectrum using a given profile described in wave space.
+    """
+    Filter the provided flux using a given profile in the wave space, applying a convolution with the specified wave and profile kernels.
 
-    This function try to keep the spectrum not shift but not confirm it.
-    The zero point of wave_kernel is meanless, so you can use a wavelength sequence
-    like [4500, 4501, 4502...], or [0, 1, 2, 3...]
-
-    Args:
-        wave (numpy.ndarray(float64)): the spectral wavelength
-        flux (numpy.ndarray(float64)): the spectral flux
-        wave_kernel (numpy.ndarray(float64)): the wavelength of the convol kernel
-        profile_kernel (numpy.ndarray(float64)): the profile of the convol kernel
+    Parameters:
+        wave (numpy.ndarray): The wavelength array that defines the wave space.
+        flux (numpy.ndarray): The flux values corresponding to the wavelengths.
+        wave_kernel (numpy.ndarray): The wavelength kernel used to define the filtering profile.
+        profile_kernel (numpy.ndarray): The profile kernel used to define the shape of the filter.
 
     Returns:
-        outflux (numpy.ndarray(float64)): the spectral flux after the broadening
+        numpy.ndarray: The filtered flux after applying the convolution with the profile kernel in wave space.
+
+    Note:
+        This function applies a cubic interpolation to the profile kernel and convolves the flux with the resulting kernel. The output flux is trimmed based on the convolution margin.
     """
     dw = wave[1] - wave[0]
     wend = wave_kernel[-1]
@@ -96,9 +113,9 @@ def filter_use_given_profile(wave, flux, velocity, profile):
     """Smooth the input spectrum using the given profile
 
     Args:
-        wave (numpy.ndarray(float64)): spectrum wave
+        wave (numpy.ndarray(float64)): spectrum wave in angstrom
         flux (numpy.ndarray(float64)): spectrum flux
-        velocity (numpy.ndarray(float64)): kernel velocity used to convol the spectrum
+        velocity (numpy.ndarray(float64)): kernel velocity used to convol the spectrum (unit: km/s)
         profile (numpy.ndarray(float64)): kernel profile used to convol the spectrum
 
     Returns:
@@ -108,16 +125,21 @@ def filter_use_given_profile(wave, flux, velocity, profile):
 
 
 def gaussian_filter(wave, flux, velocity):
-    """Smooth spectrum with gaussian kernel
+    """
+    Apply a Gaussian filter to the given flux data based on the provided velocity.
 
-    Arguments:
-        wave {numpy.ndarray(float64)} -- spectrum wave
-        flux {numpy.ndarray(float64)} -- spectrum flux
-        velocity {float} -- gaussian kernel width,
-        in the unit of FWHM (km/s)
+    Parameters:
+        wave (numpy.ndarray): The wavelength values of the spectrum (unit: AA).
+        flux (numpy.ndarray): The flux values corresponding to the wavelength values.
+        velocity (float): The velocity value to calculate the Gaussian filter width (unit: km/s).
 
     Returns:
-        numpy.ndarray(float64) -- the spectrum flux after smooth
+        numpy.ndarray: The flux data after applying the Gaussian filter.
+
+    Notes:
+        The filter width is computed from the velocity using the formula:
+            width = velocity / (2.355 * c) * 1000
+        where c is the speed of light in km/s.
     """
     par = velocity / (2.355*c) * 1000
     pararr = np.array([0.0, par])
@@ -125,29 +147,35 @@ def gaussian_filter(wave, flux, velocity):
 
 
 def gaussian_filter_wavespace(wave, flux, fwhm):
-    """Smooth spectrum with gaussian kernel in wave space
+    """
+    Applies a Gaussian filter in the wave space to smooth the given flux data.
 
-    Args:
-        wave (numpy.ndarray(float64)): -- spectrum wave
-        flux (numpy.ndarray(float64)): -- spectrum flux
-        fwhm (float): gaussian kernel width, in the unit of FWHM (AA)
+    Parameters:
+        wave (array-like): The input wave array (unit: AA).
+        flux (array-like): The flux values corresponding to the wave array.
+        fwhm (float): Full width at half maximum (FWHM) of the Gaussian filter, which determines the width of the filter (unit: km/s).
 
     Returns:
-        numpy.ndarray(float64): -- the spectrum flux after smooth
+        numpy.ndarray: The filtered flux array after applying the Gaussian filter.
+
+    Note:
+        The FWHM is converted to the standard deviation (sigma) using the relation:
+        sigma = FWHM / 2.355.
     """
     sigma = fwhm / 2.355
     return np.array(convol.gauss_filter_wavespace(wave, flux, sigma))
 
 
 def gauss_filter_mutable(wave, flux, arrvelocity):
-    """Smooth spectrum using gaussian kernel, where the kernel velocity in each wavelength can be different
+    """
+    Applies a Gaussian filter to the given wave and flux data, with a specified velocity array.
 
-    Args:
-        wave (numpy.ndarray): spectrum wavelength
-        flux (numpy.ndarray): spectrum flux
-        arrvelocity (numpy.ndarray): kernel velocity at each wavelength
+    Parameters:
+        wave (array-like): The input array representing the wavelength values (unit: AA).
+        flux (array-like): The input array representing the flux values corresponding to the wavelengths.
+        arrvelocity (array-like): The array of kernel velocities at each wavelength point (unit: km/s).
 
     Returns:
-        numpy.ndarray: the spectrum after the smooth
+        numpy.ndarray: The result of applying the Gaussian filter to the input spectrum.
     """
     return np.array(convol.gauss_filter_mutable(wave, flux, arrvelocity))

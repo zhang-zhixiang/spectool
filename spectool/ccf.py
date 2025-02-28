@@ -127,29 +127,65 @@ def find_radial_velocity(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
     return velocity
 
 
-def find_radial_velocity2(wave, flux, wave_ref, flux_ref, mult=True, plot=False, 
+def find_radial_velocity2(wave, flux, wave_ref, flux_ref, 
+                          mult=True, plot=False, 
                           ccfleft=-800, ccfright=800, velocity_resolution=1.0, 
-                          maskwindow=None, returnrmax=False, fig=None, do_continuum=True, degree=7):
-    """find the radial velocity using ccf method
+                          maskwindow=None, returnrmax=False, fig=None, 
+                          do_continuum=True, degree=7):
+    """
+    Find the radial velocity by cross-correlating the input spectrum with a reference spectrum.
 
-    Args:
-        wave (numpy.ndarray): spectral wave
-        flux (numpy.ndarray): spectral flux
-        wave_ref (numpy.ndarray): the spectral wave of template
-        flux_ref (numpy.ndarray): the spectral flux of template
-        mult (bool, optional): use multiplication to cal the ccf value, else use diff. Defaults to True.
-        plot (bool, optional): whether plot the ccf profile. Defaults to False.
-        ccfleft (int, optional): the left edge of ccf funtion, in the unit of km/s. Defaults to -800.
-        ccfright (int, optional): the right edge of ccf function, in the unit of km/s. Defaults to 800.
-        velocity_resolution (float, optional): the velocity resolution of ccf, in the unit of km/s. Defaults to 1.0.
-        returnrmax (bool, optional): whether return the Rmax, if set True, this function will return (velocity, rmax), default = False
-        fig (matplotlib.figure or None, optional): if plot = True and fig is not None, this function will plot the result in fig
-        do_continuum (bool, optional): whether do the continuum before measure radial velocity, default = True.
-        degree (int, optional): the order of the poly used to flat the spectra
+    Parameters:
+    -----------
+    wave : array_like
+        Wavelength values of the input spectrum.
+        
+    flux : array_like
+        Flux values corresponding to the wavelengths in `wave`.
+        
+    wave_ref : array_like
+        Wavelength values of the reference spectrum (template).
+        
+    flux_ref : array_like
+        Flux values corresponding to the wavelengths in `wave_ref`.
+        
+    mult : bool, optional, default=True
+        If True, the resulting radial velocity is multiplied by -1 to get the convention for radial velocity.
+        
+    plot : bool, optional, default=False
+        If True, a plot of the spectra and the cross-correlation function (CCF) is generated.
+        
+    ccfleft : float, optional, default=-800
+        Left velocity range in km/s for the cross-correlation function.
+        
+    ccfright : float, optional, default=800
+        Right velocity range in km/s for the cross-correlation function.
+        
+    velocity_resolution : float, optional, default=1.0
+        Velocity resolution in km/s for the cross-correlation.
+        
+    maskwindow : list of tuples, optional, default=None
+        A list of wavelength ranges to be masked in both spectra. Each range is a tuple of (start, end).
+        
+    returnrmax : bool, optional, default=False
+        If True, returns both the radial velocity and the maximum value of the cross-correlation function (rmax).
+        
+    fig : matplotlib.figure.Figure, optional, default=None
+        If provided, the plot will be drawn on this figure. Otherwise, a new figure will be created.
+        
+    do_continuum : bool, optional, default=True
+        If True, the spectra are normalized by their continuum. If False, no continuum normalization is applied.
+        
+    degree : int, optional, default=7
+        The degree of the polynomial used for continuum fitting if `do_continuum` is True.
 
     Returns:
-        velocity(float, km/s): the velocity of the spectrum compared with the template. Here positive value means red shift,
-        negative value means blue shift.
+    --------
+    velocity : float
+        The computed radial velocity in km/s.
+        
+    rmax : float, optional
+        The maximum value of the cross-correlation function. Returned only if `returnrmax` is True.
     """
     wl = max(wave[0], wave_ref[0])
     wr = min(wave[-1], wave_ref[-1])
@@ -243,27 +279,49 @@ def find_radial_velocity2_mc(wave, flux, fluxerr, wave_ref, flux_ref, mcnum=1000
                              mult=True, ccfleft=-800, ccfright=800, velocity_resolution=1,
                              maskwindow=None,
                              do_continuum=True, degree=7):
-    """find the radial velocity using ccf method
-
-    Args:
-        wave (numpy.ndarray): spectral wave
-        flux (numpy.ndarray): spectral flux
-        fluxerr (numpy.ndarray): spectral flux error (if fluxerr is unknown, the fluxerr can be seted to np.zeros(flux.size))
-        wave_ref (numpy.ndarray): the spectral wave of template
-        flux_ref (numpy.ndarray): the spectral flux of template
-        mcnum (int, optional): the number of iteration
-        mult (bool, optional): use multiplication to cal the ccf value, else use diff. Defaults to True.
-        ccfleft (int, optional): the left edge of ccf funtion, in the unit of km/s. Defaults to -800.
-        ccfright (int, optional): the right edge of ccf function, in the unit of km/s. Defaults to 800.
-        velocity_resolution (float, optional): the velocity resolution of ccf, in the unit of km/s. Defaults to 1.0.
-        do_continuum (bool, optional): whether do the continuum to flat the spectra before measure the radial velocity, default = True.
-        degree (int, optional): the order of the poly used to flat the spectra
-
-    Returns:
-        velocity list (numpy.ndarray, unit=km/s): the velocity list of the spectrum compared 
-        with the template after the preproccess of FR/RSS.
-        Here positive value means red shift, negative value means blue shift.
     """
+        Estimate the radial velocity by cross-correlating the given spectrum with a reference spectrum using Monte Carlo simulations.
+
+        Parameters:
+        -----------
+        wave : array_like
+            The wavelength values of the observed spectrum.
+        flux : array_like
+            The flux values corresponding to the wavelengths in `wave`.
+        fluxerr : array_like
+            The flux error values corresponding to the flux data.
+        wave_ref : array_like
+            The wavelength values of the reference spectrum.
+        flux_ref : array_like
+            The flux values corresponding to the wavelengths in `wave_ref`.
+        mcnum : int, optional
+            The number of Monte Carlo simulations to run (default is 1000).
+        mult : bool, optional
+            Whether to multiply the continuum by the scale (default is True).
+        ccfleft : float, optional
+            The left limit (in km/s) for the cross-correlation function (default is -800 km/s).
+        ccfright : float, optional
+            The right limit (in km/s) for the cross-correlation function (default is 800 km/s).
+        velocity_resolution : float, optional
+            The velocity resolution (in km/s) for the output (default is 1 km/s).
+        maskwindow : list of tuples, optional, default=None
+            A list of wavelength ranges to be masked in both spectra. Each range is a tuple of (start, end).
+        do_continuum : bool, optional
+            Whether to remove the continuum from the spectra before cross-correlation (default is True).
+        degree : int, optional
+            The degree of the polynomial used for continuum fitting (default is 7).
+
+        Returns:
+        --------
+        velocity_lst : ndarray
+            An array of radial velocity estimates obtained from the Monte Carlo simulations (in km/s).
+        
+        Notes:
+        ------
+        This function works by rebinning both the observed and reference spectra to a common wavelength grid, 
+        performing Monte Carlo simulations to introduce random noise into the flux values, and cross-correlating 
+        the noisy spectra with the reference to compute the radial velocity.
+        """
     wl = max(wave[0], wave_ref[0])
     wr = min(wave[-1], wave_ref[-1])
     arg = np.where((wave<=wr) & (wave>=wl))
@@ -290,8 +348,6 @@ def find_radial_velocity2_mc(wave, flux, fluxerr, wave_ref, flux_ref, mcnum=1000
         cont = newflux
         cont_ref = newflux_ref
     if maskwindow is not None:
-        cont_old = cont.copy()
-        cont_ref_old = cont_ref.copy()
         arg = spec_func.select_wave(newave, maskwindow)
         cont[arg] = 1.0
         cont_ref[arg] = 1.0
