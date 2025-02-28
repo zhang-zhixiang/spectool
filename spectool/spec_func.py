@@ -15,6 +15,24 @@ c = c.value
 
 
 def get_FWHM(wave, flux, winl, winr, plot=False):
+    """
+    Calculate the Full Width at Half Maximum (FWHM) of a spectral line.
+
+    The function estimates the FWHM by fitting a linear continuum to a selected region of the spectrum,
+    subtracting the continuum from the flux, and then determining the width of the region where the flux 
+    exceeds half of its maximum value.
+
+    Parameters:
+        wave (numpy.ndarray): 1D array of wavelength values.
+        flux (numpy.ndarray): 1D array of flux values corresponding to the wavelengths.
+        winl (list or numpy.ndarray): Left boundary of the region to fit the continuum. Must be in the form of [[left_start, left_end]].
+        winr (list or numpy.ndarray): Right boundary of the region to fit the continuum. Must be in the form of [[right_start, right_end]].
+        plot (bool, optional): If True, the function will generate a plot showing the spectrum, the continuum, 
+                               and the FWHM determination. Default is False.
+
+    Returns:
+        float: The Full Width at Half Maximum (FWHM) in the same units as the input wavelength.
+    """
     argl = select_wave(wave, winl)
     argr = select_wave(wave, winr)
     wl = np.median(wave[argl])
@@ -63,53 +81,64 @@ def get_FWHM(wave, flux, winl, winr, plot=False):
     return fwhm
 
 
-def get_mean_with_err(sample, sample_err=None):
-    """get the mean value of a sample
+def get_mean_with_err(arr, arr_err=None):
+    """
+    Calculate the mean and the associated error (uncertainty) of an array.
 
-    Args:
-        sample (ndarray): the sample
-        sample_err (ndarray, optional): the errors of the sample. Defaults to None.
+    Parameters:
+        arr (numpy.ndarray): Input array of values for which the mean is calculated.
+        arr_err (numpy.ndarray or None, optional): Array of errors associated with the values in `arr`. 
+                                                   If not provided (None), it assumes no individual errors.
 
     Returns:
-        mean_value, mean_value_err: the mean value and error
+        tuple: A tuple containing:
+            - mean_value (float): The mean of the values in `arr`.
+            - nerr (float): The uncertainty on the mean, calculated as the error propagation of the input values.
+        
+        If `arr_err` is provided, the function computes the total uncertainty considering both the statistical 
+        and systematic errors. Otherwise, it calculates only the statistical error based on the standard deviation of `arr`.
     """
-    mean_value = np.mean(sample)
-    std = np.std(sample)
-    if sample_err is None:
-        sigma_new = std * np.ones(sample.shape)
+
+    mean_value = np.mean(arr)
+    std = np.std(arr)
+    if arr_err is None:
+        sigma_new = std * np.ones(arr.shape)
     else:
-        mean_sigma = np.mean(sample_err)
+        mean_sigma = np.mean(arr_err)
         if mean_sigma < std:
             sigma_sys = np.sqrt(std**2 - mean_sigma**2)
-            sigma_new = np.sqrt(sample_err**2 + sigma_sys**2)
+            sigma_new = np.sqrt(arr_err**2 + sigma_sys**2)
         else:
-            sigma_new = sample_err
-    N = len(sample)
+            sigma_new = arr_err
+    N = len(arr)
     nerr = np.sqrt(np.sum(sigma_new**2)) / N
     return mean_value, nerr
 
 
 def get_flux(wave, flux, err, wcl, wcr, wl, plot=False, ax=None):
-    """measure the flux of a line in a spectrum
+    """
+    Measure the flux of a line in a spectrum.
 
-    Args:
-        wave (ndarray): wavelength of a spectrum
-        flux (ndarray): flux of a spectrum
-        err (ndarray): error of a spectrum
-        wcl ([[wcl1, wcl2]]): left continuum window
-        wcr ([[wcr1, wcr2]]): right continuum window
-        wl ([[wl1, wl2]]): line window
-        plot (bool, optional): whether plot the flux measurement. Defaults to False.
-        ax (axes, optional): the axes object used to plot. Defaults to None.
+    This function calculates the emission line flux by subtracting the continuum flux 
+    and integrating the resulting flux over the specified line window. The flux measurement 
+    also includes error propagation from both the line flux and the continuum flux.
 
-    Returns:
-        fl, fl_err, fcl, fcl_err, fcr, fcr_err: the measurement results 
-                                                (emission line flux, 
-                                                 emission line flux err, 
-                                                 left continuum flux, 
-                                                 left continuum flux err, 
-                                                 right continuum flux, 
-                                                 right continuum flux err)
+        wave (ndarray): Wavelength values of the spectrum.
+        flux (ndarray): Flux values of the spectrum.
+        err (ndarray): Error values of the flux spectrum.
+        wcl ([[wcl1, wcl2]]): Left continuum window, defined as a list of two wavelengths.
+        wcr ([[wcr1, wcr2]]): Right continuum window, defined as a list of two wavelengths.
+        wl ([[wl1, wl2]]): Line window, defined as a list of two wavelengths.
+        plot (bool, optional): Whether to plot the flux measurement. Defaults to False.
+        ax (axes, optional): The axes object used for plotting. Defaults to None.
+
+    Returns: A tuple containing the following measurements:
+            - fl (float): The emission line flux (integrated flux over the line window).
+            - fl_err (float): The error of the emission line flux.
+            - fcl (float): The flux of the left continuum (median flux over the left continuum window).
+            - fcl_err (float): The error of the left continuum flux.
+            - fcr (float): The flux of the right continuum (median flux over the right continuum window).
+            - fcr_err (float): The error of the right continuum flux.
     """
     argl = select_wave(wave, wcl)
     argr = select_wave(wave, wcr)
@@ -140,9 +169,6 @@ def get_flux(wave, flux, err, wcl, wcr, wl, plot=False, ax=None):
     err_line = np.sqrt(err_1**2 + err_2**2 + err_3**2)
 
     if plot is True:
-        # print('err_1 =', err_1)
-        # print('err_2 =', err_2)
-        # print('err_3 =', err_3)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -197,14 +223,25 @@ def get_linear_continuum(wave, flux, win1, win2):
 
 
 def get_SNR(flux):
-    """estimate the SNR of a spectrum
+    """
+    Calculate the Signal-to-Noise Ratio (SNR) of a given flux array.
 
-    Args:
-        flux (numpy.ndarray): spectral flux
+    The SNR is calculated by dividing the median of the flux values (signal) by 
+    the noise estimation, which is computed using the absolute difference between 
+    the central flux values and neighboring ones.
+
+    Parameters:
+        flux (numpy.ndarray): A 1D array containing the flux values.
 
     Returns:
-        float: the SNR of the flux
+        float: The computed Signal-to-Noise Ratio (SNR).
+
+    Note:
+        The noise is estimated using a robust method involving the median of 
+        differences between adjacent points in the flux array. The signal is 
+        represented by the median of the entire flux array.
     """
+
     signal = np.median(flux)
     n = len(flux)
     noise = 0.6052697 * np.median(
@@ -215,6 +252,24 @@ def get_SNR(flux):
 
 
 def plot_spec(wave, flux, ax=None, select_wins=None, mask_wins=None):
+    """
+    Plot a spectrum with optional highlighting of selected and masked regions.
+
+    Parameters:
+        wave (array-like): 1D array of wavelength values.
+        flux (array-like): 1D array of flux values corresponding to the wavelengths.
+        ax (matplotlib.axes.Axes, optional): Matplotlib Axes object to plot on. 
+                                             If None, the current active Axes is used.
+        select_wins (list of tuples, optional): List of wavelength ranges to highlight 
+                                                as selected regions. Each element should be 
+                                                a tuple (start, end) representing the range.
+        mask_wins (list of tuples, optional): List of wavelength ranges to highlight as masked 
+                                              regions. Each element should be a tuple (start, end) 
+                                              representing the range.
+
+    Returns:
+        ax (matplotlib.axes.Axes): The Axes object with the plotted spectrum and highlighted regions.
+    """
     if ax is None:
         ax = plt.gca()
     ax.plot(wave, flux)
@@ -295,20 +350,69 @@ def scombine(
 
 
 def air2vac(wave):
-    """convert the wavelength from air to vacuum
+    """
+    Convert air wavelength to vacuum wavelength.
 
-    Args:
-        wave (numpy.ndarray): wave data
+    This function computes the vacuum wavelength corresponding to a given air wavelength using the standard refractive index model. The calculation accounts for the refractive index of air based on the wavelength in angstroms.
+
+    Parameters:
+        wave (float): The wavelength in air in angstroms.
 
     Returns:
-        numpy.ndarray: the wavelength in vacuum
+        float: The corresponding vacuum wavelength in angstroms.
     """
+
     coef = (
         6.4328e-5
         + 2.94981e-2 / (146 - (1.0e4 / wave) ** 2)
         + 2.554e-4 / (41 - (1.0e4 / wave) ** 2)
     )
     return (1 + coef) * wave
+
+
+def detect_and_correct_cosmic_rays(wave, flux, window_size=50, threshold=5, plot=False):
+    """
+    Detect and correct cosmic rays in the spectrum using a median filter.
+
+    Args:
+        wave (numpy.ndarray): Wavelength of the spectrum
+        flux (numpy.ndarray): Flux of the spectrum
+        window_size (int, optional): The window size for the median filter. Default is 50.
+        threshold (float, optional): The threshold for detecting cosmic rays, defined as multiples of the standard deviation. Default is 5.
+        plot (bool, optional): Whether to plot the spectrum. Default is False.
+
+    Returns:
+        numpy.ndarray: The corrected flux
+    """
+    # Apply median filter for smoothing
+    smooth_flux = median_filter(flux, window_size)
+    
+    # Calculate the difference between the original flux and the smoothed flux
+    diff = flux - smooth_flux
+    
+    # Compute the standard deviation to detect cosmic rays
+    std_dev = np.std(diff)
+    
+    # Detect cosmic rays (points where the difference exceeds the threshold)
+    cosmic_ray_mask = np.abs(diff) > threshold * std_dev
+    
+    # Replace the cosmic ray affected parts with the smoothed values
+    corrected_flux = flux.copy()
+    corrected_flux[cosmic_ray_mask] = smooth_flux[cosmic_ray_mask]
+    
+    # If plotting is required, show the original, smoothed, and corrected spectra
+    if plot:
+        plt.figure(figsize=(10, 6))
+        plt.plot(wave, flux, label="Original Flux", color="grey", alpha=0.5)
+        plt.plot(wave, smooth_flux, label="Smoothed Flux", color="blue")
+        plt.plot(wave, corrected_flux, label="Corrected Flux", color="red")
+        plt.legend()
+        plt.xlabel("Wavelength")
+        plt.ylabel("Flux")
+        plt.title("Cosmic Ray Detection and Correction")
+        plt.show()
+    
+    return corrected_flux
 
 
 def median_reject_cos(flux, size=21):
