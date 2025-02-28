@@ -35,4 +35,4 @@ python setup.py install
 - pybind11
 - PyAstronomy
 
-安装方法请参见[README](https://github.com/zhang-zhixiang/spectool/blob/main/README.md)。
+安装方法请参见[README](https://github.com/zhang-zhixiang/spectool/blob/master/README.md)。
